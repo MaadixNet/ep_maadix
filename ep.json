@@ -4,11 +4,13 @@
       "name": "ep_maadix",
       "post": ["ep_etherpad-lite/static"],
       "hooks": {
-        "expressCreateServer": "ep_maadix/hooks",
-        "eejsBlock_adminMenu" : "ep_maadix/hooks",
-        "eejsBlock_indexWrapper" : "ep_maadix/hooks",
-        "socketio"		: "ep_maadix/hooks",
-        "eejsBlock_styles" : "ep_maadix/hooks"
+        "expressConfigure": "ep_maadix/hooks",
+        "eejsBlock_adminMenu": "ep_maadix/hooks",
+        "expressCreateServer": "ep_maadix/index",
+        "eejsBlock_adminMenu": "ep_maadix/hooks",
+        "eejsBlock_indexWrapper": "ep_maadix/hooks",
+        "socketio": "ep_maadix/hooks",
+        "eejsBlock_styles": "ep_maadix/hooks"
       }
     }
   ]

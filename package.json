@@ -4,9 +4,12 @@
     "url": "https://github.com/MaadixNet/ep_maadix/issues"
   },
   "dependencies": {
-    "formidable": "3.5.0",
-    "mysql2": "3.5.1",
-    "nodemailer": "6.9.3"
+    "express-form-data": "^3.0.1",
+    "express-validator": "^7.2.1",
+    "formidable": "3.5.4",
+    "multer": "^2.0.1",
+    "mysql2": "3.14.1",
+    "nodemailer": "7.0.5"
   },
   "description": "With the maadix plugin it's possible to create private pads in groups and invite users. It's a User-Management System. It allows User to register (otional), authenticate, to create groups and to create pads in groups.",
   "homepage": "https://github.com/MaadixNet/ep_maadix#readme",

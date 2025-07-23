@@ -10,6 +10,7 @@ overflow-x: hidden;
  body {font-size: 1rem;
 background-color: #f2f2f2;
 }
+iframe#iframePad {height: 100vh;}
 @font-face {
       font-family: 'fontello';
       src: url('../font/fontello.eot?24873458');
@@ -190,8 +191,6 @@ th.wiprec-20 {width:20%;}
   z-index:1000;
   width:550px;
   background-color:#fff;
- // text-align:center;
-  .roundedBorder;
   border: 9px solid @main-orange;
 }
 

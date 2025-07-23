@@ -30,7 +30,7 @@
               <div class="header-block header-block-nav second">
                   <ul id="profile">
                     <li>
-                        <span class="name"><i class="demo-icon icon-user">&#xe800;</i>  <%= user[0].name %> <i class="demo-icon icon-down-dir-1">&#xe818;</i></span>
+                        <span class="name"><i class="demo-icon icon-user">&#xe800;</i>  <%= user.name %> <i class="demo-icon icon-down-dir-1">&#xe818;</i></span>
                       <ul>
                         <li><a class="dropdown-item" href="../user/<%= userid %>">My Profile</a></li>
                         <li><a class="dropdown-item" href="../logout">Logout</a></li>
@@ -68,20 +68,19 @@
                     <% } %>
                     <div class="formBody">
                       <label for ="email">E-mail</label>
-                      <input type="email" name="email" id="email" placeholder="<%= user[0].email %>" class="smallMarginBottom" >
+                      <input type="email" name="email" id="email" value ="<%= user.email %>" class="smallMarginBottom" >
                       <label for ="username">Username</label>
-                      <input type="text" name="username" id="username" placeholder="<%= user[0].name %>" >
+                      <input type="text" name="username" id="username" value="<%= user.name %>" >
 
                       <label for ="fullname">Fullname</label>
-                      <input type="text" name="fullname" id="fullname" placeholder="<%= user[0].FullName%>" readonly>
+                      <input type="text" name="fullname" id="fullname" value="<%= user.FullName%>" >
 
                       <label for ="password">Password</label>
-                      <input type="password" name="password" id="password" placeholder="Password" readonly>
+                      <input type="password" name="password" id="password" placeholder="Password" >
 
                       <label for ="passwordrepeat">Repeat password</label>
                       <input type="password" name="passwordrepeat" id="passwordrepeat" placeholder="Confirm Password" > 
 
-                      <input type="hidden" name="baseurl" id="baseurl" value="<%= baseurl %>">
                       <input type="hidden" name="userid" id="userid" value="<%= userid %>">
                       <button type="submit" lang="en">Save changes</button>
                     </div>

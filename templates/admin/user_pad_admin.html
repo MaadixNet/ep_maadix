@@ -2,8 +2,8 @@
 <html>
   <head>
     <title data-l10n-id="admin_settings.page-title">Settings - Etherpad</title>
-    <meta name="viewport" content="width=device-width">
-    <link rel="stylesheet" href="../static/css/admin.css">
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="../static/css/admin.css" />
     <script src="../static/js/vendors/jquery.js"></script>
     <script src="../socket.io/socket.io.js"></script>
     <script src="../static/js/socketio.js"></script>
@@ -15,15 +15,13 @@
   </head>
   <body>
     <div id="wrapper">
-
       <% if (errors.length) { %>
-        <div class="errors">
-          <% errors.forEach(function (item) { %>
-            <div class="error"><%= item.toString() %></div>
-          <% }) %>
-        </div>
+      <div class="errors">
+        <% errors.forEach(function (item) { %>
+        <div class="error"><%= item.toString() %></div>
+        <% }) %>
+      </div>
       <% } %>
-
 
       <div class="menu">
         <h1><a href="../">Etherpad</a></h1>
@@ -37,30 +35,28 @@
       </div>
 
       <div class="innerwrapper">
-	  <div id="header">
-	    <ul id="maadix_menu">
-	      <li><a href="userpadadmin">Settings</a></li>
-	      <li><a href="userpadadmin/groups">Manage groups</a></li>
-	      <li><a href="userpadadmin/users">Manage users</a></li>
-	    </ul>
-	  </div>
-	  <h2>Users and groups</h2>
-	    <p>In this area you can manage all your users and groups.</p>
-	    <p>Currently there are <span id="n_users">0</span> users and <span id="n_groups">0</span> groups created.</p>
-	  <h3>Settings</h3>
-	  <ul>
-	    <li><input type="checkbox" id="recover_pw"> Allow users to recover lost password</li>
-	    <li><input type="checkbox" id="register_enabled"> Allow users to register</li>
-	    <li><input type="checkbox" id="public_pads"> Allow public pads. (NOTE: you have to restart Etherpad to apply this new setting. For that go to Etherpad core Settings - 'Settings' tab on the left main menu - and  click 'Restart Etherpad' button at the bottom of the page)</li>
-
-	  </ul>
-	</div>
-
-      <div class="innerwrapper-err" >
-        <h2 class="err-message"></h2>
+        <div id="header">
+          <ul id="maadix_menu">
+            <li><a href="userpadadmin">Settings</a></li>
+            <li><a href="userpadadmin/groups">Manage groups</a></li>
+            <li><a href="userpadadmin/users">Manage users</a></li>
+          </ul>
+        </div>
+        <h2>Users and groups</h2>
+        <p>In this area you can manage all your users and groups.</p>
+        <p>Currently there are <span id="n_users">0</span> users and <span id="n_groups">0</span> groups created.</p>
+        <h3>Settings</h3>
+        <ul>
+          <li><input type="checkbox" id="recover_pw" /> Allow users to recover lost password</li>
+          <li><input type="checkbox" id="register_enabled" /> Allow users to register</li>
+          <li><input type="checkbox" id="public_pads" /> Allow public pads. (NOTE: you have to restart Etherpad to apply this new setting. For that go to Etherpad core Settings - 'Settings' tab on the left main menu - and click 'Restart Etherpad' button at the bottom of the page)</li>
+        </ul>
       </div>
 
+      <div class="innerwrapper-err">
+        <h2 class="err-message"></h2>
+      </div>
     </div>
-  <div style="display:none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+    <div style="display: none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
   </body>
 </html>

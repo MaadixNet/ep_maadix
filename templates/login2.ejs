@@ -25,19 +25,19 @@
 
 
                 <% if (activated == 'ok') { %>
-                <div class="welocome"><h3 class="title center">Congratulations. You account has been activate<br>
+                <div class="welocome"><h3 class="title center">Congratulations. Your account has been activated<br>
                     Please Login</h3>
                     </div>
                 <% } %>
                 <div id="formblock" class="login">
-                <form id="formEtherpadLogin" method="post" class="white">
+                <form id="formEtherpadLogin" method="post" action="/login" class="white">
                     <label for="email">Username or email</label>
-                    <input type="text" name="email" id="email" class="smallMarginBottom">
+                    <input type="text" name="email" id="email" class="smallMarginBottom" required="required">
                     <label for="password">Password</label>
-                    <input type="password" name="password" id="password">
+                    <input type="password" name="password" id="password" required="required">
                     <input type="hidden" name="baseurl" id="baseurl" value="">
                     <button type="submit" lang="en">Login</button>
-                    <% if (settings.recover_pw) { %>
+		   <% if (settings && settings.recover_pw) { %>
                       <hr>
                       <a class="" href ="./recover">Forgot Password?</a>
                     <% } %>
@@ -47,30 +47,3 @@
         </div>
     </article>
 </html>
-<script>
-var getBaseURL = function(slice,cb){
-        
-      var pathArray = window.location.pathname.split( '/' );
-      if (pathArray != '/login'){
-        pathArray.pop();
-        var url = pathArray.join('/');
-      } else {
-        url = '';
-      }
-     /* console.log(">>>>>");
-      console.log(url);
-      console.log("<<<<<<<<<");
-    */
-  cb(url);
-};
-
-
-        
-      $(document).ready(function(){
-          getBaseURL(1, function(baseurl){
-            url = baseurl;
-            console.log('URL' + url);
-            $('#baseurl').val(url);
-          });
-      });            
-</script>

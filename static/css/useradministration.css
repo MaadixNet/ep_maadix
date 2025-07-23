@@ -15,13 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License. */
 
 div.leftwrapper {
-  background: none repeat scroll 0px 0px #FFFFFF;
+  background: none repeat scroll 0px 0px #ffffff;
   box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.2);
   margin-right: 20px;
   padding: 15px;
   max-width: 150px;
 
-  height:100%;
+  height: 100%;
   float: left;
   border-right: 1px solid #ccc;
   max-height: 70px;
@@ -59,18 +59,18 @@ div.lefttable {
 }
 
 .sort:after {
-  content: '▲▼'
+  content: '▲▼';
 }
 
 .sort.up:after {
-  content:'▲'
+  content: '▲';
 }
 
 .sort.down:after {
-  content:'▼'
+  content: '▼';
 }
 
-.black_overlay{
+.black_overlay {
   display: none;
   position: absolute;
   top: 0%;
@@ -78,30 +78,30 @@ div.lefttable {
   width: 100%;
   height: 100%;
   background-color: black;
-  z-index:1001;
+  z-index: 1001;
   -moz-opacity: 0.2;
-  opacity:.20;
+  opacity: 0.2;
   filter: alpha(opacity=20);
 }
- 
+
 .white_content {
   display: none;
   position: absolute;
   top: 25%;
   left: 40%;
   bottom: 25%;
-  right:  40%;
+  right: 40%;
   background-color: white;
-  z-index:1002;
+  z-index: 1002;
   border: 5px solid grey;
   border-radius: 10px;
   font-size: 22px;
 }
- 
+
 #UserBox {
   height: 400px;
 }
- 
+
 .close-btn {
   float: right;
   border: 5px solid grey;
@@ -132,13 +132,13 @@ div.lefttable {
   overflow: auto;
 }
 
-input[type="password"] {
+input[type='password'] {
   border-radius: 3px;
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   padding: 10px;
   *padding: 0;
- /* IE7 hack */
+  /* IE7 hack */
   width: 100%;
   outline: none;
   border: 1px solid #ddd;
@@ -150,7 +150,7 @@ table td {
   text-align: center;
 }
 
-table input[type=button] {
+table input[type='button'] {
   float: none;
   width: initial;
 }
@@ -158,13 +158,31 @@ table input[type=button] {
 #GroupBox {
   height: 400px;
 }
-input[type="button"]{ cursor: pointer;}
-span.count {color:#444; background-color:#FFF;}
+input[type='button'] {
+  cursor: pointer;
+}
+span.count {
+  color: #444;
+  background-color: #fff;
+}
 /**********HEADER************/
-#header {background-color: #d7dde4; display: flex; align-items: center;}
-ul#maadix_menu {width:100%;}
+#header {
+  background-color: #d7dde4;
+  display: flex;
+  align-items: center;
+}
+ul#maadix_menu {
+  width: 100%;
+}
 
-ul#maadix_menu li {display:inline-block; list-style:none;font-size:21px;padding: 8px;border: 1px solid #555;}
-ul#maadix_menu li a {padding:8px;}
+ul#maadix_menu li {
+  display: inline-block;
+  list-style: none;
+  font-size: 21px;
+  padding: 8px;
+  border: 1px solid #555;
+}
+ul#maadix_menu li a {
+  padding: 8px;
+}
 /***************************/
-

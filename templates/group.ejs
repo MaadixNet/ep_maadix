@@ -111,24 +111,6 @@
 
 
 	 <script>
-       		var getBaseURL = function(slice,cb){
-       			var  loc = document.location, port = loc.port == "" ? (loc.protocol == "https:" ? 443
-       					: 80)
-       					: loc.port, url = loc.protocol + "//"
-       					+ loc.hostname +":"+ loc.port, pathComponents = location.pathname
-       					.split('/'),
-       			// Strip admin/plugins
-       			baseURL = pathComponents.slice(0,
-       					pathComponents.length - slice).join('/')
-       					+ '/';
-       			
-       			url = url + baseURL;
-       			console.log(">>>>>");
-       			console.log(url);
-       			console.log("<<<<<<<<<");
-       			cb(url);
-       		};
-
     		$(document).ready(function(){  			
                   $('#padstable').DataTable( {
                     "sDom": 'Rfrtlip',

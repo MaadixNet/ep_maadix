@@ -13,19 +13,19 @@ table.dataTable thead .sorting_desc_disabled {
   background-position: center right;
 }
 table.dataTable thead .sorting {
-  background-image: url("../html/sort_both.png");
+  background-image: url('../html/sort_both.png');
 }
 table.dataTable thead .sorting_asc {
-  background-image: url("../html/sort_asc.png");
+  background-image: url('../html/sort_asc.png');
 }
 table.dataTable thead .sorting_desc {
-  background-image: url("../html/sort_desc.png");
+  background-image: url('../html/sort_desc.png');
 }
 table.dataTable thead .sorting_asc_disabled {
-  background-image: url("../html/sort_asc_disabled.png");
+  background-image: url('../html/sort_asc_disabled.png');
 }
 table.dataTable thead .sorting_desc_disabled {
-  background-image: url("../html/sort_desc_disabled.png");
+  background-image: url('../html/sort_desc_disabled.png');
 }
 .dataTables_wrapper .dataTables_filter {
 }
@@ -56,7 +56,8 @@ table.dataTable thead .sorting_desc_disabled {
   border: 1px solid transparent;
   border-radius: 2px;
 }
-.dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
   color: #687996;
   border: 1px solid #687996;
   background-color: white;
@@ -73,7 +74,9 @@ table.dataTable thead .sorting_desc_disabled {
   background: linear-gradient(to bottom, white 0%, #dcdcdc 100%);
   /* W3C */
 }
-.dataTables_wrapper .dataTables_paginate .paginate_button.disabled, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {
   cursor: default;
   color: #666 !important;
   border: 1px solid transparent;
@@ -117,7 +120,8 @@ table.dataTable thead .sorting_desc_disabled {
 .dataTables_wrapper .dataTables_paginate .ellipsis {
   padding: 0 1em;
 }
-@media screen and (max-width:360px){
-  .dataTables_wrapper .dataTables_filter input {margin-left:0px;}
+@media screen and (max-width: 360px) {
+  .dataTables_wrapper .dataTables_filter input {
+    margin-left: 0px;
+  }
 }
-

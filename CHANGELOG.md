@@ -1,21 +1,20 @@
-# 2.0.0 
+# 2.0.0
 
 ### Notable enhancements and fixes
 
-* Security
-  * Updated package dependencies
-  * Replaced crypto pacakage with built in one
+- Security
+  - Updated package dependencies
+  - Replaced crypto pacakage with built in one
 
 ### Compatibility changes
-* Require Etherpad >= 1.9.1 
 
+- Require Etherpad >= 1.9.1
 
 # 1.0.1
 
 ### Compatibility changes
-* Updated for Eteherpad 1.8.4
 
-
+- Updated for Eteherpad 1.8.4
 
 # v0.1.3
 
