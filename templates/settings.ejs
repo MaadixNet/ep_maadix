@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Settings</title>
+    <base href="<%= baseUrl %>/" />
+    <%- include('blocks/head', { settings: settings }) %>
+  </head>
+  <body>
+    <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid  }) %>
+
+    <div id="wrapper">
+      <% if (errors.length) { %>
+      <div class="errors">
+        <% errors.forEach(function (item) { %>
+        <div class="error"><%= item.toString() %></div>
+        <% }) %>
+      </div>
+      <% } %>
+      <div class="innerwrapper">
+        <article class="content items-list-page">
+          <div id="main">
+            <div class="inside">
+              <div class="inputBlock">
+                <% if (isAdmin) { %>
+                <h3>Settings</h3>
+                <form id="setSettingsForm">
+                  <div class="margin20">
+                    <% if (settings.register_enabled === 1) { %>
+                    <input type="checkbox" id="register_enabled" value="<%=settings.register_enabled%>" checked />
+                    <% } else { %>
+                    <input type="checkbox" id="register_enabled" value="<%=settings.register_enabled%>" />
+                    <% } %>
+                    Allow users to register
+                    <br />
+                    <% if (settings.recover_pw === 1) { %>
+                    <input type="checkbox" id="recover_pw" value="<%=settings.recover_pw%>" checked />
+                    <% } else { %>
+                    <input type="checkbox" id="recover_pw" value="<%=settings.recover_pw%>" />
+                    <% } %>
+                    Allow users to recover lost password
+                    <br />
+                    <% if (settings.public_pads === 1) { %>
+                    <input type="checkbox" id="public_pads" value="<%=settings.public_pads%>" checked />
+                    <% } else { %>
+                    <input type="checkbox" id="public_pads" value="<%=settings.public_pads%>" />
+                    <% } %>
+                    Allow public pads. (NOTE: you have to restart Etherpad to apply this new setting. For that go to Etherpad core Settings - 'Settings' tab on the admin interface left menu - and click 'Restart Etherpad' button at the bottom of the page)
+                    <br />
+                  </div>
+                  <button type="submit" lang="en" id="setSettingsForm">Save</button>
+                </form>
+                <% } else { %>
+                <p>You don't have permission to see this page</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+    <div style="display: none"><a href="/javascript" data-jslicense="1">JavaScript license information</a></div>
+  </body>
+</html>

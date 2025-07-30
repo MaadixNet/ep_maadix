@@ -149,23 +149,23 @@ jQuery(document).ready(function () {
     var data = {};
     //url = baseurl;
     getBaseURL(1, function (baseurl) {
-    data.userid = $('#userid').val();
-    data.email = $('#email').val();
-    data.username = $('#username').val();
-    data.password = $('#password').val();
-    data.fullname = $('#fullname').val();
-    data.passwordrepeat = $('#passwordrepeat').val();
-    post(data, baseurl + 'updateprofile', function (data) {
-      if (data.success) {
+      data.userid = $('#userid').val();
+      data.email = $('#email').val();
+      data.username = $('#username').val();
+      data.password = $('#password').val();
+      data.fullname = $('#fullname').val();
+      data.passwordrepeat = $('#passwordrepeat').val();
+      post(data, baseurl + 'updateprofile', function (data) {
+        if (data.success) {
           $('h3.title').after('<div class="resMessage" lang="en">Profile succesfully updated</div>');
-      } else {
-        console.log(data.error);
-        $('#wrapper').find('.errorRight').remove();
-        $('h3.title').after('<div class="errorRight"><span class="arrowRight"></span><span class="errorUp error" lang="en">' + data.error + '</span></div>');
+        } else {
+          console.log(data.error);
+          $('#wrapper').find('.errorRight').remove();
+          $('h3.title').after('<div class="errorRight"><span class="arrowRight"></span><span class="errorUp error" lang="en">' + data.error + '</span></div>');
         }
+      });
+    });
   });
-});
-});
   //Function to create a new Group. Used in dashboard.ejs
   $('#createPrivateGroupForm').submit(function (e) {
     e.preventDefault();
@@ -317,7 +317,7 @@ jQuery(document).ready(function () {
     var loc;
     getBaseURL(1, function (baseurl) {
       data.location = baseurl;
-      data.userEmail = $('#email').val();
+      data.email = $('#email').val();
       post(data, baseurl + 'recover', function (data) {
         console.log(data);
         if (data.error) {

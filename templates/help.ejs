@@ -1,92 +1,55 @@
 <!doctype html>
 <html>
-	<head>
-		<title>Help</title>
+  <head>
+    <%- include('blocks/head', { settings: settings }) %>
+  </head>
+  <body>
+    <%- include('blocks/header', { isAdmin: isAdmin, settings: settings }) %>
 
-		<meta charset="utf-8"> 
-		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-		<link rel="shortcut icon" href="favicon.ico">
-		<link rel="localizations" type="application/l10n+json" href="locales.json">
-                <script type="text/javascript" src="static/js/html10n.js"></script>
-                <script type="text/javascript" src="static/js/l10n.js"></script>
-                <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
-                <script src="static/plugins/ep_maadix/static/js/client/less.js" type="text/javascript"></script>
-                <script src="static/plugins/ep_maadix/static/js/client/jquery.js" type="text/javascript"></script>
-                <script src="static/plugins/ep_maadix/static/js/client/documentReadyRefresh.js" type="text/javascript"></script>
-                <script src="static/plugins/ep_maadix/static/js/client/retina.js" type="text/javascript"></script>
-                
-                <link href="static/plugins/ep_maadix/static/css/custom.css" rel="stylesheet"> 
+    <title>Help</title>
 
-	</head>
-	<body>
-	<header>
-            <div class="header-block header-block-buttons">
-                <div class="header-block header-block-nav first">
-                  <a class="btn btn-sm header-btn" href="dashboard"><i class="demo-icon icon-home home-menu">&#xe81d;</i> My Groups</a> |
-                        <% if (settings.public_pads) { %>
-                          <a class="btn btn-sm header-btn" href="home">Public Pad</a> |
-                        <% } %>
-                        <a class="btn btn-sm header-btn" href="#top">Help</a>
-                </div>
-                <div class="header-block header-block-nav second">
-                  <ul id="profile">
-                    <li>
-                        <span class="name"><i class="demo-icon icon-user">&#xe800;</i>  <%= username %> <i class="demo-icon icon-down-dir-1">&#xe818;</i></span>
-                      <ul>
-                        <li><a class="dropdown-item" href="user/<%= userid %>">My Profile</a></li>
-                        <li><a class="dropdown-item" href="./logout">Logout</a></li>
-                      </ul>
-                    </li>
-                  </ul>
-                </div>
-            </div>
-	</header>	
-        <article class="content items-list-page">
-          <div id="main" >
-              <div class="inside">
-                <h2>Index</h2>
-                  <ol>
-                    <li><a href="#groups">Groups</a></li>
-                    <li><a href="#users">Invite Users</a></li>
-                    <li><a href="#roles">User Roles</a></li>
-                    <li><a href="#pads">Create Private Pads</a></li>
-                  </ol>
+    <article class="content items-list-page">
+      <div id="main">
+        <div class="inside">
+          <h2>Index</h2>
+          <ol>
+            <li><a href="#settings">Settings</a></li>
+            <li><a href="#groups">Groups</a></li>
+            <li><a href="#users">Invite Users</a></li>
+            <li><a href="#roles">User Roles</a></li>
+            <li><a href="#pads">Create Private Pads</a></li>
+          </ol>
+          <h3 id="settings">Settings edit</h3>
+          <p></p>
+          <h3 id="groups">Groups</h3>
+          <p>Private Pads must be created within a group. You can belong to one or more Groups and you can create your own. To view the Groups you have access to, or create a new one go to <a class="" href="dashboard">'My Groups </a></p>
 
-<h3 id="groups">Groups</h3>
-<p>Private Pads must be created within a group. You can belong to one or more Groups and you can create your own. To view the Groups you have access to, or create a new one go to <a class="" href="dashboard">'My Groups </a></p>
+          <h3>How to create a private group?</h3>
 
-<h3>How to create a private group?</h3>
+          Under "Create a new Private Group" enter a groupname (this name must not exist on the sytem yet) and click on the button "Create". The new group will be listed on the same page now. You can start inviting people or creating pads.
 
-    Under "Create a new Private Group" enter a groupname (this name must not exist on the sytem yet) and click on the button "Create". The new group will be listed on the same page now. You can start inviting people or creating pads. 
+          <h3 id="users">Users</h3>
+          If you want to add/invite users, click on 'View /Add Users' from the table in 'My groups' page. Under 'Invite user to this group' insert a valid email Address. If the inserted email does not exist on the syste yet, a confirmation email will be sent to the new user for activating the account. You will have to choose the role you want to assign to the new user for this group.
 
-<h3 id="users">Users</h3>
-    If you want to add/invite users, click on 'View /Add Users' from the table in 'My groups' page. Under 'Invite user to this group' insert a valid email Address. If the inserted email does not exist on the syste yet, a confirmation email will be sent to the new user for activating the account.
-You will have to choose the role you want to assign to the new user for this group.
+          <h3 id="roles">Roles</h3>
+          <p>Roles applies only to current group. A user may have acces to multiple groups with different role in each of them. If a user creates a new group their role will be 'Admin'.</p>
+          <p>A user can never assign a role higher than his own role inside the current group.</p>
+          <p>Available roles are:</p>
 
-<h3 id="roles">Roles</h3>
-<p>Roles applies only to current group. A user may have acces to multiple groups with different role in each of them. If a user creates a new group their role will be 'Admin'.</p>
-<p>A user can never assign a role higher than his own role inside the current group.</p>
-</p>Available roles are:</p>
+          <ul>
+            <li>Group Author: Can create and edit Pads</li>
+            <li>Group Manager: Can create/edit/delete Pads and invite/remove Users</li>
+            <li>Group Admin: Can create/edit/delete Pads, invite/remove Users, delete the whole group</li>
+          </ul>
 
-<ul>
-<li>Group Author: Can create and edit Pads</li>
-<li>Group Manager: Can create/edit/delete Pads and invite/remove Users</li>
-<li>Group Admin: Can create/edit/delete Pads, invite/remove Users, delete the whole group</li>
-</ul>
+          <p>The new invited user will appear in the table below and you will be able to change their role later</p>
 
+          <h3 id="pads">How to create a private pad?</h3>
 
-<p>The new invited user will appear in the table below and you will be able to change their role later </p>
-
-<h3 id="pads">How to create a private pad?</h3>
-
-<p>Pads must be created from the group pad list page. Click on View/Add Pads from <a class="" href="dashboard">'My Groups </a> page table. Enter a pad name under "Create Private Pad for this group' and click on on the button "Create". The new pad will  be listed in the table below.
-    Click on the pad name from tha table list to to start editing the pad.</p>
-<p>Pad name must be unique for each group</p>
-
-
-                   
-		</div>
-	</div> 
-      </article>
-      </body>	
+          <p>Pads must be created from the group pad list page. Click on View/Add Pads from <a class="" href="dashboard">'My Groups </a> page table. Enter a pad name under "Create Private Pad for this group' and click on on the button "Create". The new pad will be listed in the table below. Click on the pad name from tha table list to to start editing the pad.</p>
+          <p>Pad name must be unique for each group</p>
+        </div>
+      </div>
+    </article>
+  </body>
 </html>

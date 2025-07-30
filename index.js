@@ -131,14 +131,26 @@ async function mailTransporterAsync() {
   });
 }
 
-function getPasswordAsyncVersion() {
-  return new Promise((resolve) => {
-    getPassword(resolve);
-  });
+
+async function getPasswordAsyncVersion({
+  length = 12,
+  extraChars = '',
+  first = { number: true, lower: true, upper: true, other: false },
+  latter = { number: true, lower: true, upper: true, other: false }
+  } = {}) {
+  if (length <= 0) return '';
+
+  let password = '';
+  password += getRandomChar(first.number, first.lower, first.upper, first.other, extraChars);
+
+  for (let i = 1; i < length; i++) {
+    password += getRandomChar(latter.number, latter.lower, latter.upper, latter.other, extraChars);
+  }
+
+  return password;
 }
 
 async function checkIfUserExistsAsync(sql, params) {
-
   //const result =await queryAsync(sql, params);
   const result = await pool.query(sql, params);
   return result.length > 0;
@@ -247,7 +259,7 @@ async function getPadsOfGroupAsync(groupId, padname = '') {
 
       log('debug', 'pad name ' + name);
 
-      const group = await getEtherpadGroupFromNormalGroupAsync(groupId); 
+      const group = await getEtherpadGroupFromNormalGroupAsync(groupId);
 
       const padId = `${group}$${name}`;
       const origPad = await padManager.getPad(padId);
@@ -262,12 +274,11 @@ async function getPadsOfGroupAsync(groupId, padname = '') {
       allPads.push({
         name,
         lastedit: converterPad(lastEdited),
-        timestampedit: lastEdited
+        timestampedit: lastEdited,
       });
     }
 
     return allPads;
-
   } catch (error) {
     mySqlErrorHandler(error);
     throw error;
@@ -339,7 +350,7 @@ async function getUsersOfGroupAsync(groupId, userId) {
 
   try {
     const [rows] = await pool.query(sql, [groupId, userId]);
-    return rows.filter(user => user.name !== '');
+    return rows.filter((user) => user.name !== '');
   } catch (err) {
     mySqlErrorHandler(err);
     return [];
@@ -357,7 +368,6 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 */
-
 
 function getRandomNum(lbound, ubound) {
   return Math.floor(Math.random() * (ubound - lbound)) + lbound;
@@ -465,7 +475,6 @@ function deleteUserFromEtherPad(userid, cb) {
   });
 }
 
-
 const userAuthentication = async function (username, password) {
   log('debug', 'userAuthentication');
 
@@ -523,22 +532,22 @@ function updateSql(sqlUpdate, params, cb) {
 exports.expressCreateServer = function (hook_name, args, cb) {
   const express = require('express');
   args.app.use(express.urlencoded({ extended: true }));
+  args.app.set('view cache', false);
 
-// Redirect url with final slash to none slash
-args.app.use((req, res, next) => {
-  if (req.path !== '/' && req.path.endsWith('/')) {
-    const query = req.url.slice(req.path.length);
-    res.redirect(301, req.path.slice(0, -1) + query);
-  } else {
-    next();
-  }
-});
-// Rediect public pads to etherpad lite pads view
-args.app.get('/pads/:id', (req, res) => {
-  const id = req.params.id;
-  res.redirect(301, `/p/${id}`);
-});
-
+  // Redirect url with final slash to none slash
+  args.app.use((req, res, next) => {
+    if (req.path !== '/' && req.path.endsWith('/')) {
+      const query = req.url.slice(req.path.length);
+      res.redirect(301, req.path.slice(0, -1) + query);
+    } else {
+      next();
+    }
+  });
+  // Rediect public pads to etherpad lite pads view
+  args.app.get('/pads/:id', (req, res) => {
+    const id = req.params.id;
+    res.redirect(301, `/p/${id}`);
+  });
 
   args.app.get('/logout', async (req, res) => {
     req.session.userId = null;
@@ -715,12 +724,11 @@ args.app.get('/pads/:id', (req, res) => {
     }
   });
 
-  args.app.post('/recover', [check('userEmail').isEmail().trim()], async (req, res) => {
+  args.app.post('/recover', [check('email').isEmail().trim()], async (req, res) => {
+    const userEmail = req.body.email;
     const errors = validationResult(req);
-    const userEmail = req.body.userEmail;
 
     if (!errors.isEmpty()) {
-      console.log('RTRTRTRT', errors);
       return sendError('Email is not valid!', res);
     }
 
@@ -813,353 +821,331 @@ args.app.get('/pads/:id', (req, res) => {
     const authenticated = await userAuthenticatedAsync(req);
 
     if (authenticated) {
-    try {
-    // Check if group exists
-    const currGroup = await getGroupAsync(req.params.groupid);
-    // Check if user is in group
-    const pads = await getPadsOfGroupAsync(req.params.groupid);
-    const currUser = await getUserAsync(req.session.userId);
-    console.log("currUser. " + currUser.name )
-    // Check if current user is in group
-    const currUserGroup = await getUserGroupAsync(req.params.groupid, req.session.userId);
-    console.log("currUserGroup " + currUserGroup);
-    var render_args;
-    if (currGroup && currUser && currUserGroup != null) {
-      render_args = {
-                      errors: [],
-                      id: currGroup.name,
-                      groupid: currGroup.groupID,
-                      userid: req.session.userId,
-                      username: req.session.username,
-                      role: currUserGroup.Role,
-                      pads: pads,
-                      settings: settings,
-                    };
-                    res.send(eejs.require('ep_maadix/templates/group.ejs', render_args));
-  } else {
-    render_args = {
-                      errors: [],
-                      id: false,
-                      groupid: false,
-                      userid: req.session.userId,
-                      username: req.session.username,
-                      baseurl: req.session.baseurl,
-                      role: false,
-                      pads: false,
-                      settings: settings,
-                    };
-                    res.send(eejs.require('ep_maadix/templates/group.ejs', render_args));
-		  }
-  } catch (err) {
-    console.error("/group/:groupid", err);
-    sendError("Internal server error", res);
-  }
-
+      try {
+        // Check if group exists
+        const currGroup = await getGroupAsync(req.params.groupid);
+        // Check if user is in group
+        const pads = await getPadsOfGroupAsync(req.params.groupid);
+        const currUser = await getUserAsync(req.session.userId);
+        console.log('currUser. ' + currUser.name);
+        // Check if current user is in group
+        const currUserGroup = await getUserGroupAsync(req.params.groupid, req.session.userId);
+        console.log('currUserGroup ' + currUserGroup);
+        var render_args;
+        if (currGroup && currUser && currUserGroup != null) {
+          render_args = {
+            errors: [],
+            id: currGroup.name,
+            isAdmin: req.session?.user?.is_admin || false, 
+            groupid: currGroup.groupID,
+            userid: req.session.userId,
+            username: req.session.username,
+            role: currUserGroup.Role,
+            pads: pads,
+            settings: settings,
+          };
+          res.send(eejs.require('ep_maadix/templates/group.ejs', render_args));
+        } else {
+          render_args = {
+            errors: [],
+            id: false,
+            groupid: false,
+	    isAdmin: req.session?.user?.is_admin || false,
+            userid: req.session.userId,
+            username: req.session.username,
+            baseurl: req.session.baseurl,
+            role: false,
+            pads: false,
+            settings: settings,
+          };
+          res.send(eejs.require('ep_maadix/templates/group.ejs', render_args));
+        }
+      } catch (err) {
+        console.error('/group/:groupid', err);
+        sendError('Internal server error', res);
+      }
     } else {
-	 res.redirect(`${getAppBaseUrl(req)}` + '/login');
-        }
-  });
-
-args.app.get('/groupusers/:groupid', async function (req, res) {
-  try {
-    const settings = await getPadsSettingsAsync(); // Asegurate de tener esta versión async
-    const authenticated = await userAuthenticatedAsync(req);
-
-
-    if (!authenticated) {
-	res.redirect(`${getAppBaseUrl(req)}` + '/login');  
-    }
-
-    const groupId = req.params.groupid;
-    const userId = req.session.userId;
-
-    const users = await getUsersOfGroupAsync(groupId, userId);
-  for (let i = 0; i < users.length; i++) {
-    console.log(users[i].email);
-  }
-    const currUser = await getUserAsync(userId);
-    const currGroup = await getGroupAsync(groupId);
-    const currUserGroup = await getUserGroupAsync(groupId, userId);
-
-    const render_args = {
-      errors: [],
-      id: currGroup?.name || false,
-      groupid: currGroup?.groupID || false,
-      userid: userId,
-      username: req.session.username,
-      baseurl: req.session.baseurl,
-      role: currUserGroup?.Role || false,
-      users: users || false,
-      settings: settings,
-    };
-
-    res.send(eejs.require('ep_maadix/templates/groupusers.ejs', render_args));
-  } catch (err) {
-    console.error('Error en /groupusers/:groupid:', err);
-    res.status(500).send('Internal Server Error');
-  }
-
-});
-  args.app.post('/createGroup', [check('groupName').isLength({ min: 2 }).isAlphanumeric().notEmpty().trim().escape()], async (req, res) => {
-  try {
-    const authenticated = await userAuthenticatedAsync(req); 
-    const data = {};
-
-    if (!authenticated) {
-      return res.status(401).send("You are not logged in!!");
-    }
-    const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-          sendError('Invalid Group Name. Need at least 2  alphanumeric chars.', res);
-          return;
-        }
-
-    const groupName = req.body.groupName;
-
-    if (!groupName) {
-      return sendError("Group Name not defined", res);
-    }
-
-    const existGroupSql = "SELECT * FROM Groups WHERE Groups.name = ?";
-    const found = await getOneValueSqlAsync(existGroupSql, [groupName]);
-
-    if (found) {
-      return sendError("Group already exists", res);
-    }
-
-    // Create group
-    const addGroupSql = "INSERT INTO Groups VALUES(null, ?)";
-    //const groupResult = await queryAsync(addGroupSql, [groupName]);
-    const groupResult = await pool.query(addGroupSql, [groupName]);
-    const groupId = groupResult.insertId;
-    data.groupid = groupId;
-
-    //Link group to user
-    const addUserGroupSql = "INSERT INTO UserGroup VALUES(?, ?, 1)";
-    //await queryAsync(addUserGroupSql, [req.session.userId, groupId]);
-    await pool.query(addUserGroupSql, [req.session.userId, groupId]);
-
-    // Crear grupo Etherpad
-    try {
-      await groupManager.createGroupIfNotExistsFor(groupId.toString());
-    } catch (err) {
-      log('error', 'failed to createGroupIfNotExistsFor: ' + err.message);
-    }
-
-    data.success = true;
-    data.error = null;
-    res.send(data);
-
-  } catch (err) {
-    console.error("Error in /createGroup:", err);
-    sendError("Internal server error", res);
-  }
-});
-
-args.app.post('/deletePad', async function (req, res) {
-  const { groupId, padName } = req.body;
-  console.log("GROP " + groupId + "pad "+ padName);
-  const data = {};
-
-  try {
-    const authenticated = await userAuthenticatedAsync(req);
-    if (!authenticated) return res.send('You are not logged in!!');
-
-    if (!groupId) return sendError('Group-Id not defined', res);
-    if (!padName) return sendError('Pad Name not defined', res);
-
-    const [userGroup] = await pool
-      .query(
-        'SELECT * from UserGroup where UserGroup.userId = ? and UserGroup.groupID= ?',
-        [req.session.userId, groupId]
-      )
-      .then(([rows]) => rows);
-
-    if (!userGroup || userGroup.Role >= 3) {
-      return sendError('User is not owner! Can not delete Pad', res);
-    }
-
-    await getEtherpadGroupFromNormalGroupAsync(groupId);
-
-    await pool
-      .query(
-        'DELETE FROM GroupPads WHERE GroupPads.PadName = ? and GroupPads.GroupID = ?',
-        [padName, groupId]
-      );
-
-    await deletePadFromEtherpadAsync(padName, groupId);
-
-    data.success = true;
-    data.error = null;
-    res.send(data);
-  } catch (err) {
-    console.error('Error deleting pad:', err);
-    sendError('Unexpected error while deleting pad', res);
-  }
-});
-
-args.app.post('/deleteGroup', async (req, res) => {
-  try {
-    const authenticated = await userAuthenticatedAsync(req); 
-    if (!authenticated) return res.send('You are not logged in!!');
-
-    const { groupId } = req.body;
-    if (!groupId) return sendError('Group-Id not defined', res);
-
-    const userGroup = await getAllSqlAsync(
-      'SELECT * FROM UserGroup WHERE userID = ? AND groupID = ?',
-      [req.session.userId, groupId]
-    );
-
-    if (!userGroup || userGroup.length === 0) {
-      return sendError('You are not in this Group.', res);
-    }
-
-    if (userGroup[0].Role !== 1) {
-      return sendError('User is not Owner. Can not delete Group', res);
-    }
-
-    // Delete from Groups
-    await pool.query('DELETE FROM Groups WHERE groupID = ?', [groupId]);
-
-    // Delete from UserGroup
-    await pool.query('DELETE FROM UserGroup WHERE groupID = ?', [groupId]);
-
-    // Delete from GroupPads
-    await pool.query('DELETE FROM GroupPads WHERE groupID = ?', [groupId]);
-
-    // Call asyncDeleteGroup
-    await asyncDeleteGroup(groupId);
-
-    res.send({
-      success: true,
-      error: null,
-    });
-  } catch (error) {
-    console.error('Error deleting group:', error);
-    sendError('Unexpected error during group deletion', res);
-  }
-});
-
-args.app.post('/directToPad', async (req, res) => {
-  try {
-    const { groupId, padname } = req.body;
-    const userId = req.session.userId;
-
-    if (!await userAuthenticatedAsync(req)) {
       res.redirect(`${getAppBaseUrl(req)}` + '/login');
     }
+  });
 
-    if (!groupId) {
-      return sendError('Group-Id not defined', res);
+  args.app.get('/groupusers/:groupid', async function (req, res) {
+    try {
+      const settings = await getPadsSettingsAsync(); // Asegurate de tener esta versión async
+      const authenticated = await userAuthenticatedAsync(req);
+
+      if (!authenticated) {
+        res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      }
+
+      const groupId = req.params.groupid;
+      const userId = req.session.userId;
+
+      const users = await getUsersOfGroupAsync(groupId, userId);
+      for (let i = 0; i < users.length; i++) {
+        console.log(users[i].email);
+      }
+      const currUser = await getUserAsync(userId);
+      const currGroup = await getGroupAsync(groupId);
+      const currUserGroup = await getUserGroupAsync(groupId, userId);
+
+      const render_args = {
+        errors: [],
+        id: currGroup?.name || false,
+        groupid: currGroup?.groupID || false,
+        userid: userId,
+        username: req.session.username,
+        isAdmin: req.session?.user?.is_admin || false,
+        baseUrl: `${getAppBaseUrl(req)}`,
+        role: currUserGroup?.Role || false,
+        users: users || false,
+        settings: settings,
+      };
+
+      res.send(eejs.require('ep_maadix/templates/groupusers.ejs', render_args));
+    } catch (err) {
+      console.error('Error en /groupusers/:groupid:', err);
+      res.status(500).send('Internal Server Error');
     }
+  });
+  args.app.post('/createGroup', [check('groupName').isLength({ min: 2 }).isAlphanumeric().notEmpty().trim().escape()], async (req, res) => {
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      const data = {};
 
-    // Check if user belongs to group
-    const [userGroup] = await pool.query(
-      'SELECT * FROM UserGroup WHERE userId = ? AND groupID = ?',
-      [userId, groupId]
-    );
+      if (!authenticated) {
+        return res.status(401).send('You are not logged in!!');
+      }
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        sendError('Invalid Group Name. Need at least 2  alphanumeric chars.', res);
+        return;
+      }
 
-    if (!userGroup.length) {
-      return sendError('User not in Group', res);
+      const groupName = req.body.groupName;
+
+      if (!groupName) {
+        return sendError('Group Name not defined', res);
+      }
+
+      const existGroupSql = 'SELECT * FROM Groups WHERE Groups.name = ?';
+      const found = await getOneValueSqlAsync(existGroupSql, [groupName]);
+
+      if (found) {
+        return sendError('Group already exists', res);
+      }
+
+      // Create group
+      const addGroupSql = 'INSERT INTO Groups VALUES(null, ?)';
+      //const groupResult = await queryAsync(addGroupSql, [groupName]);
+      const [groupResult] = await pool.query(addGroupSql, [groupName]);
+      const groupId = groupResult.insertId;
+      data.groupid = groupId;
+
+      //Link group to user
+      const addUserGroupSql = 'INSERT INTO UserGroup VALUES(?, ?, 1)';
+      //await queryAsync(addUserGroupSql, [req.session.userId, groupId]);
+      await pool.query(addUserGroupSql, [req.session.userId, groupId]);
+
+      // Crear grupo Etherpad
+      try {
+        await groupManager.createGroupIfNotExistsFor(groupId.toString());
+      } catch (err) {
+        log('error', 'failed to createGroupIfNotExistsFor: ' + err.message);
+      }
+
+      data.success = true;
+      data.error = null;
+      res.send(data);
+    } catch (err) {
+      console.error('Error in /createGroup:', err);
+      sendError('Internal server error', res);
     }
+  });
 
-    // Get pad's group
-    const group = await getEtherpadGroupFromNormalGroupAsync(groupId);
+  args.app.post('/deletePad', async function (req, res) {
+    const { groupId, padName } = req.body;
+    console.log('GROP ' + groupId + 'pad ' + padName);
+    const data = {};
 
-    // Creat pad  author 
-    const etherpadAuthor = await addUserToEtherpadAsync(userId);
-    if (!etherpadAuthor) {
-      return sendError('Error creating Etherpad author', res);
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) return res.send('You are not logged in!!');
+
+      if (!groupId) return sendError('Group-Id not defined', res);
+      if (!padName) return sendError('Pad Name not defined', res);
+
+      const [userGroup] = await pool.query('SELECT * from UserGroup where UserGroup.userId = ? and UserGroup.groupID= ?', [req.session.userId, groupId]).then(([rows]) => rows);
+
+      if (!userGroup || userGroup.Role >= 3) {
+        return sendError('User is not owner! Can not delete Pad', res);
+      }
+
+      await getEtherpadGroupFromNormalGroupAsync(groupId);
+
+      await pool.query('DELETE FROM GroupPads WHERE GroupPads.PadName = ? and GroupPads.GroupID = ?', [padName, groupId]);
+
+      await deletePadFromEtherpadAsync(padName, groupId);
+
+      data.success = true;
+      data.error = null;
+      res.send(data);
+    } catch (err) {
+      console.error('Error deleting pad:', err);
+      sendError('Unexpected error while deleting pad', res);
     }
+  });
 
-    // Create session
-    const session = await sessionManager.createSession(
-      group,
-      etherpadAuthor.authorID,
-      Date.now() + 2 * 60 * 60 * 1000 // 2 horas
-    );
+  args.app.post('/deleteGroup', async (req, res) => {
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) return res.send('You are not logged in!!');
 
-    const data = {
-      success: true,
-      session: session.sessionID,
-      group: group,
-      username: req.session.username,
-      pad_name: padname
-    };
+      const { groupId } = req.body;
+      if (!groupId) return sendError('Group-Id not defined', res);
 
-    console.log(data);
-    res.send(data);
-  } catch (err) {
-    console.error('Error in /directToPad:', err);
-    sendError('Unexpected server error', res);
-  }
-});
+      const userGroup = await getAllSqlAsync('SELECT * FROM UserGroup WHERE userID = ? AND groupID = ?', [req.session.userId, groupId]);
 
+      if (!userGroup || userGroup.length === 0) {
+        return sendError('You are not in this Group.', res);
+      }
 
-args.app.get('/group/:groupID/pad/:padID/?', async (req, res) => {
-  try {
-    const settings = await getPadsSettingsAsync();
+      if (userGroup[0].Role !== 1) {
+        return sendError('User is not Owner. Can not delete Group', res);
+      }
 
-    const authenticated = await userAuthenticatedAsync(req);
-    if (!authenticated) return res.redirect(`${getAppBaseUrl(req)}` + '/login');
-    const groupID = req.params.groupID;
-    const rawPadID = req.params.padID;
+      // Delete from Groups
+      await pool.query('DELETE FROM Groups WHERE groupID = ?', [groupId]);
 
-    const [,padID] = rawPadID.split('$'); 
-    console.log("padIDpadIDpadIDpadIDpadIDpadID" + padID);
-    const userID = req.session.userId;
+      // Delete from UserGroup
+      await pool.query('DELETE FROM UserGroup WHERE groupID = ?', [groupId]);
 
-    const currGroup = await getGroupAsync(groupID);
-    const currUser = await getUserAsync(userID);
-    const [padExists] = await pool.query(
-      'SELECT * FROM GroupPads WHERE PadName = ?',
-      [padID]
-    );
+      // Delete from GroupPads
+      await pool.query('DELETE FROM GroupPads WHERE groupID = ?', [groupId]);
 
-    const foundGroup = currGroup || false;
-    const foundUser = currUser; 
-    const render_args = {
-      errors: [],
-      padname: padExists.length ? padID : false,
-      userid: userID,
-      username: req.session.username,
-      baseurl: req.session.baseurl,
-      groupID: foundGroup ? groupID : false,
-      groupName: foundGroup ? foundGroup.name : false,
-      settings,
-      padurl: padExists.length ? `${getAppBaseUrl(req)}/p/${rawPadID}` : false,
-    };
+      // Call asyncDeleteGroup
+      await asyncDeleteGroup(groupId);
 
-    res.send(eejs.require('ep_maadix/templates/pad.ejs', render_args));
+      res.send({
+        success: true,
+        error: null,
+      });
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      sendError('Unexpected error during group deletion', res);
+    }
+  });
 
-  } catch (err) {
-    console.error('Error in /group/:groupID/pad/:padID:', err);
-    res.status(500).send('Server error');
-  }
-});
+  args.app.post('/directToPad', async (req, res) => {
+    try {
+      const { groupId, padname } = req.body;
+      const userId = req.session.userId;
+
+      if (!(await userAuthenticatedAsync(req))) {
+        res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      }
+
+      if (!groupId) {
+        return sendError('Group-Id not defined', res);
+      }
+
+      // Check if user belongs to group
+      const [userGroup] = await pool.query('SELECT * FROM UserGroup WHERE userId = ? AND groupID = ?', [userId, groupId]);
+
+      if (!userGroup.length) {
+        return sendError('User not in Group', res);
+      }
+
+      // Get pad's group
+      const group = await getEtherpadGroupFromNormalGroupAsync(groupId);
+
+      // Creat pad  author
+      const etherpadAuthor = await addUserToEtherpadAsync(userId);
+      if (!etherpadAuthor) {
+        return sendError('Error creating Etherpad author', res);
+      }
+
+      // Create session
+      const session = await sessionManager.createSession(
+        group,
+        etherpadAuthor.authorID,
+        Date.now() + 2 * 60 * 60 * 1000 // 2 horas
+      );
+
+      const data = {
+        success: true,
+        session: session.sessionID,
+        group: group,
+        username: req.session.username,
+        pad_name: padname,
+      };
+
+      console.log(data);
+      res.send(data);
+    } catch (err) {
+      console.error('Error in /directToPad:', err);
+      sendError('Unexpected server error', res);
+    }
+  });
+
+  args.app.get('/group/:groupID/pad/:padID/?', async (req, res) => {
+    try {
+      const settings = await getPadsSettingsAsync();
+
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) return res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      const groupID = req.params.groupID;
+      const rawPadID = req.params.padID;
+
+      const [, padID] = rawPadID.split('$');
+      const userID = req.session.userId;
+
+      const currGroup = await getGroupAsync(groupID);
+      const currUser = await getUserAsync(userID);
+      const [padExists] = await pool.query('SELECT * FROM GroupPads WHERE PadName = ?', [padID]);
+
+      const foundGroup = currGroup || false;
+      const foundUser = currUser;
+      const render_args = {
+        baseUrl: `${getAppBaseUrl(req)}`,
+        errors: [],
+        padname: padExists.length ? padID : false,
+        userid: userID,
+        username: req.session.username,
+        baseurl: req.session.baseurl,
+        groupID: foundGroup ? groupID : false,
+        groupName: foundGroup ? foundGroup.name : false,
+        settings,
+        padurl: padExists.length ? `${getAppBaseUrl(req)}/p/${rawPadID}` : false,
+      };
+
+      res.send(eejs.require('ep_maadix/templates/pad.ejs', render_args));
+    } catch (err) {
+      console.error('Error in /group/:groupID/pad/:padID:', err);
+      res.status(500).send('Server error');
+    }
+  });
 
   /*Users funtions*/
-args.app.get('/confirm/:token', async (req, res) => {
-  try {
-    const authenticated = await userAuthenticatedAsync(req);
-    
-    if (authenticated) {
-      return res.redirect(`${getAppBaseUrl(req)}`+ '/dashboard');
+  args.app.get('/confirm/:token', async (req, res) => {
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+
+      if (authenticated) {
+        return res.redirect(`${getAppBaseUrl(req)}` + '/dashboard');
+      }
+
+      const render_args = {
+        errors: [],
+        tok: req.params.token,
+      };
+
+      res.send(eejs.require('ep_maadix/templates/confirm.ejs', render_args));
+    } catch (err) {
+      console.error('Error in /confirm/:token route:', err);
+      res.status(500).send('Internal server error');
     }
-
-    const render_args = {
-      errors: [],
-      tok: req.params.token,
-    };
-
-    res.send(eejs.require('ep_maadix/templates/confirm.ejs', render_args));
-    
-  } catch (err) {
-    console.error('Error in /confirm/:token route:', err);
-    res.status(500).send('Internal server error');
-  }
-});
+  });
   args.app.post(
     '/confirminvitation',
     [
@@ -1224,90 +1210,81 @@ args.app.get('/confirm/:token', async (req, res) => {
       }
     }
   );
-args.app.post('/updateUserRole', async (req, res) => {
-  const data = {};
-  try {
-    const authenticated = await userAuthenticatedAsync(req);
-    if (!authenticated) {
-     return res.redirect(`${getAppBaseUrl(req)}`+ '/login');
-   
-    }
-
-    const { groupId, newrole, userid } = req.body;
-    const baseurl = `${getAppBaseUrl(req)}`;
-
-    if (!groupId) return sendError('Group-Id not defined', res);
-    if (!newrole) return sendError('New Role not defined', res);
-    if (!userid) return sendError('User not defined', res);
-
-    const [userGroup] = await pool
-      .query(
-        'SELECT * FROM UserGroup WHERE userId = ? AND groupID = ?',
-        [req.session.userId, groupId]
-      );
-
-    if (!userGroup || userGroup.length === 0) {
-      return sendError('You are not in this Group.', res);
-    }
-
-    if (userGroup[0].Role > newrole) {
-      return sendError('You cannot assign a Role higher than yours', res);
-    }
-
-    await pool
-      .query(
-        'UPDATE UserGroup SET Role = ? WHERE groupID = ? AND userID = ?',
-        [newrole, groupId, userid]
-      );
-
-    data.success = true;
-    data.error = null;
-    res.send(data);
-  } catch (err) {
-    console.error('Error in /updateUserRole:', err);
-    sendError('Internal server error', res);
-  }
-});
-
-args.app.get('/user/:userId', async (req, res) => {
-  try {
+  args.app.post('/updateUserRole', async (req, res) => {
     const data = {};
-    const settings = await getPadsSettingsAsync(); 
-    const authenticated = await userAuthenticatedAsync(req); 
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) {
+        return res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      }
 
-    if (!authenticated || req.session.userId != req.params.userId) {
-      return res.redirect(req.session.baseurl + '/dashboard');
+      const { groupId, newrole, userid } = req.body;
+      const baseurl = `${getAppBaseUrl(req)}`;
+
+      if (!groupId) return sendError('Group-Id not defined', res);
+      if (!newrole) return sendError('New Role not defined', res);
+      if (!userid) return sendError('User not defined', res);
+
+      const [userGroup] = await pool.query('SELECT * FROM UserGroup WHERE userId = ? AND groupID = ?', [req.session.userId, groupId]);
+
+      if (!userGroup || userGroup.length === 0) {
+        return sendError('You are not in this Group.', res);
+      }
+
+      if (userGroup[0].Role > newrole) {
+        return sendError('You cannot assign a Role higher than yours', res);
+      }
+
+      await pool.query('UPDATE UserGroup SET Role = ? WHERE groupID = ? AND userID = ?', [newrole, groupId, userid]);
+
+      data.success = true;
+      data.error = null;
+      res.send(data);
+    } catch (err) {
+      console.error('Error in /updateUserRole:', err);
+      sendError('Internal server error', res);
     }
+  });
 
-    const user = await getUserAsync(req.session.userId);
-    console.log("EEEEEE" + user);
-    const render_args = {
-      errors: [],
-      userid: req.session.userId,
-      user: user,
-      settings,
-      message: '',
-    };
-    res.send(eejs.require('ep_maadix/templates/user2.ejs', render_args));
-  } catch (err) {
-    console.error('Error in /user/:userId:', err);
-    sendError('Internal server error', res);
-  }
-});
-args.app.post(
-  '/user/updateprofile',
-  [
-    check('email').optional().isEmail().withMessage('No valid E-Mail').trim(),
-    check('username').optional().trim(),
-    check('password').optional({ checkFalsy: true }).isLength({ min: 12 }).withMessage('Password must be at least 12 characters long '),
-    check('userid').exists().withMessage('Missing userid'),
-  ],
-  async (req, res) => {
+  args.app.get('/user/:userId', async (req, res) => {
+    try {
+      const data = {};
+      const settings = await getPadsSettingsAsync();
+      const authenticated = await userAuthenticatedAsync(req);
+
+      if (!authenticated || req.session.userId != req.params.userId) {
+        return res.redirect(req.session.baseurl + '/dashboard');
+      }
+
+      const user = await getUserAsync(req.session.userId);
+      console.log('EEEEEE' + user);
+      const render_args = {
+        errors: [],
+        userid: req.session.userId,
+        user: user,
+        isAdmin: req.session?.user?.is_admin || false,
+        settings,
+        baseUrl: `${getAppBaseUrl(req)}`,
+        message: '',
+      };
+      res.send(eejs.require('ep_maadix/templates/user2.ejs', render_args));
+    } catch (err) {
+      console.error('Error in /user/:userId:', err);
+      sendError('Internal server error', res);
+    }
+  });
+  args.app.post('/user/updateprofile', [check('email').optional().isEmail().withMessage('No valid E-Mail').trim(), check('username').optional().trim(), check('password').optional({ checkFalsy: true }).isLength({ min: 12 }).withMessage('Password must be at least 12 characters long '), check('userid').exists().withMessage('Missing userid')], async (req, res) => {
     // Validaciones automáticas
-    const data ={};
+    const data = {};
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return sendError(errors.array().map(e => e.msg).join(', '), res);
+      return sendError(
+        errors
+          .array()
+          .map((e) => e.msg)
+          .join(', '),
+        res
+      );
     }
 
     const { fullname = '', email = '', password = '', passwordrepeat = '', username = '', userid } = req.body;
@@ -1343,173 +1320,162 @@ args.app.post(
 
       updateUserSql += ' WHERE userID = ?';
       params.push(req.session.userId);
-      data.message = "Profile successfully update";
+      data.message = 'Profile successfully update';
       await pool.query(updateUserSql, params);
-	    data.success = true;
-	    data.error = null;
-	    res.send(data);
+      data.success = true;
+      data.error = null;
+      res.send(data);
     } catch (err) {
       console.error('Error en /updateprofile:', err);
       sendError('Could not update profile', res);
     }
-  }
-);
-args.app.post('/inviteUsers', async (req, res) => {
-  try {
-    const authenticated = await userAuthenticatedAsync(req);
-    if (!authenticated) return sendError('You are not logged in!', res);
+  });
+  args.app.post('/inviteUsers', async (req, res) => {
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) return sendError('You are not logged in!', res);
 
-    const baseUrl = getAppBaseUrl(req);
-    const { groupId, userEmail, UserRole } = req.body;
-    if (!groupId) return sendError('Group ID not defined', res);
-    if (!userEmail) return sendError('No User given', res);
+      const baseUrl = getAppBaseUrl(req);
+      const { groupId, userEmail, UserRole } = req.body;
+      if (!groupId) return sendError('Group ID not defined', res);
+      if (!userEmail) return sendError('No User given', res);
 
-    // First check if inviter has prmission to invite
-    const userGroup = await getOneValueSqlAsync('SELECT * from UserGroup where UserGroup.userId = ? and UserGroup.groupID= ?', [req.session.userId, groupId]);
-    if (!userGroup || userGroup.Role >= 3) return sendError('You can not send invitations to this group', res);
-    if (UserRole < 0 || UserRole > 3 || UserRole < userGroup.Role) return sendError('You can not assign a role higher than yours', res);
-    // Check if user to be invited is  already in group
-    const existSql = 'SELECT * FROM UserGroup WHERE groupID = ? AND userID in (SELECT userID from User where email = ?)';
-    const alreadyInvited = await getOneValueSqlAsync(existSql, [ groupId, userEmail]);
+      // First check if inviter has prmission to invite
+      const userGroup = await getOneValueSqlAsync('SELECT * from UserGroup where UserGroup.userId = ? and UserGroup.groupID= ?', [req.session.userId, groupId]);
+      if (!userGroup || userGroup.Role >= 3) return sendError('You can not send invitations to this group', res);
+      if (UserRole < 0 || UserRole > 3 || UserRole < userGroup.Role) return sendError('You can not assign a role higher than yours', res);
+      // Check if user to be invited is  already in group
+      const existSql = 'SELECT * FROM UserGroup WHERE groupID = ? AND userID in (SELECT userID from User where email = ?)';
+      const alreadyInvited = await getOneValueSqlAsync(existSql, [groupId, userEmail]);
 
-    if (alreadyInvited) {
-      sendError('User is already invited to this group', res);
-      return;
+      if (alreadyInvited) {
+        sendError('User is already invited to this group', res);
+        return;
+      }
+
+      const currUser = await getUserAsync(req.session.userId);
+      const result = await inviteUser(userEmail, groupId, UserRole, currUser.name, baseUrl);
+
+      res.send({ success: true });
+    } catch (err) {
+      console.error('Error in /inviteUsers:', err);
+      res.status(500).send({ success: false, error: 'Internal Server Error' });
     }
+  });
 
-    const currUser = await getUserAsync(req.session.userId);
-    const result = await inviteUser(userEmail, groupId, UserRole, currUser.name, baseUrl);
+  async function inviteUser(userEmail, groupId, UserRole, inviter, baseUrl) {
+    try {
+      // Get group name
+      const query = 'SELECT name FROM Groups  WHERE groupID = ?';
+      const group = await getOneValueSqlAsync(query, [groupId]);
+      const sql = 'SELECT * FROM User WHERE email = ?';
+      const user = await getOneValueSqlAsync(sql, [userEmail]);
+      let userID;
+      let msg;
+      let url;
+      if (!user) {
+        // user does not exists yet and must be creates
+        msg = eMailAuth.invitateunregisterednmsg;
+        const consString = await getPasswordAsyncVersion();
 
-    res.send({ success: true });
-    
-  } catch (err) {
-    console.error('Error in /inviteUsers:', err);
-    res.status(500).send({ success: false, error: 'Internal Server Error' });
-  }
-});
+        url = `${baseUrl}/confirm/${consString}`;
+        const [result] = await pool.query('INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, null, 0)', [userEmail, userEmail, consString]);
+        userID = result.insertId;
+        const mappedUser = await addUserToEtherpadAsync(userID);
+        if (!mappedUser) {
+          throw new Error('Failed to add user to Etherpad');
+        }
+      } else {
+        userID = user.userID;
+        msg = eMailAuth.invitationmsg;
+      }
 
-async function inviteUser(userEmail, groupId, UserRole, inviter, baseUrl) {
-  try {
-    // Get group name
-    const query  = 'SELECT name FROM Groups  WHERE groupID = ?';
-    const group  = await getOneValueSqlAsync(query, [groupId]);
-    const sql = 'SELECT * FROM User WHERE email = ?';
-    const user = await getOneValueSqlAsync(sql, [userEmail]);
-    let userID;
-    let msg;
-    let url;
-    if (!user) {
-    // user does not exists yet and must be creates
-    msg = eMailAuth.invitateunregisterednmsg;
-    const consString = await getPasswordAsyncVersion();
-
-    url = `${baseUrl}/confirm/${consString}`;
-    const [result] = await pool.query(
-      'INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, null, 0)',
-      [userEmail, userEmail, consString]
-    );
-    userID = result.insertId;
-    const mappedUser = await addUserToEtherpadAsync(userID);
-    if (!mappedUser) {
-      throw new Error('Failed to add user to Etherpad');
-    }
-
-    } else {
-    userID = user.userID;
-    msg = eMailAuth.invitationmsg;
-    }
-
-    // Add user to group
-    // userID | groupID | Role 
-    await pool.query(
-      'INSERT INTO UserGroup VALUES (?, ?, ?)',
-      [userID, groupId, UserRole]
-    );
-    // Finally send email
-    msg = msg.replace(/<groupname>/g, group.name);
-    msg = msg.replace(/<fromuser>/g, inviter);
-    msg = msg.replace(/<url>/g, url);
+      // Add user to group
+      // userID | groupID | Role
+      await pool.query('INSERT INTO UserGroup VALUES (?, ?, ?)', [userID, groupId, UserRole]);
+      // Finally send email
+      msg = msg.replace(/<groupname>/g, group.name);
+      msg = msg.replace(/<fromuser>/g, inviter);
+      msg = msg.replace(/<url>/g, url);
       const message = {
         text: msg,
         from: eMailAuth.invitationfrom,
         to: `${userEmail} <${userEmail}>`,
-        subject: eMailAuth.invitationsubject
+        subject: eMailAuth.invitationsubject,
       };
 
       const transporter = await mailTransporterAsync();
       await transporter.sendMail(message);
-
-  } catch (err) {
-    log('error', 'Error in inviteUser:');
-    log('error', err);
-    return { success: false, error: 'Error inviting user' };
+    } catch (err) {
+      log('error', 'Error in inviteUser:');
+      log('error', err);
+      return { success: false, error: 'Error inviting user' };
+    }
   }
-}
 
-args.app.post('/deleteUserFromGroup', async function (req, res) {
-  try {
-    const authenticated = await userAuthenticatedAsync(req);
-    if (!authenticated) {
-      res.redirect('/login');
+  args.app.post('/deleteUserFromGroup', async function (req, res) {
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) {
+        res.redirect('/login');
+      }
+
+      const { userID, groupID } = req.body;
+
+      if (!userID || !groupID) {
+        return sendError('No User ID or Group ID given', res);
+      }
+
+      const userGroup = await getOneValueSqlAsync('SELECT * from UserGroup where userId = ? and groupID = ?', [req.session.userId, groupID]);
+
+      if (!userGroup || userGroup.length === 0 || userGroup.Role >= 3) {
+        return sendError('You are not allowed to remove users from this group!!', res);
+      }
+
+      const success = await pool.query('DELETE FROM UserGroup WHERE userID = ? AND groupID = ?', [userID, groupID]);
+
+      res.send({ success });
+    } catch (err) {
+      console.error(err);
+      sendError('An error occurred while deleting the user from the group.', res);
     }
-
-    const { userID, groupID } = req.body;
-
-    if (!userID || !groupID) {
-      return sendError('No User ID or Group ID given', res);
-    }
-
-    const userGroup = await getOneValueSqlAsync('SELECT * from UserGroup where userId = ? and groupID = ?', [req.session.userId, groupID]);
-
-    if (!userGroup || userGroup.length === 0 || userGroup.Role >= 3) {
-      return sendError('You are not allowed to remove users from this group!!', res);
-    }
-
-    const success = await pool.query('DELETE FROM UserGroup WHERE userID = ? AND groupID = ?', [userID, groupID]);
-
-    res.send({ success });
-
-  } catch (err) {
-    console.error(err);
-    sendError('An error occurred while deleting the user from the group.', res);
-  }
-});
+  });
 
   /*END Users functions*/
 
-args.app.post('/createPad', async function (req, res) {
-  try {
-    const fields = req.body;
+  args.app.post('/createPad', [check('padName').isLength({ min: 2 }).isAlphanumeric().notEmpty().trim().escape()], async function (req, res) {
+    try {
+      const fields = req.body;
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) {
+        res.redirect('/login');
+      }
+      if (!fields.groupId) {
+        return sendError('Group-Id not defined', res);
+      }
+      if (!fields.padName) {
+        return sendError('Pad Name not defined', res);
+      }
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        sendError('Invalid Group Name. Need at least 2  alphanumeric chars.', res);
+        return;
+      }
+      const existPadInGroupSql = 'SELECT * FROM GroupPads WHERE GroupPads.GroupID = ? AND GroupPads.PadName = ?';
+      const found = await getOneValueSqlAsync(existPadInGroupSql, [fields.groupId, fields.padName]);
 
-    if (!fields.groupId) {
-      return sendError('Group-Id not defined', res);
+      if (found || fields.padName.length === 0) {
+        return sendError('Pad already Exists', res);
+      }
+
+      const addPadToGroupSql = 'INSERT INTO GroupPads VALUES(?, ?)';
+      const query = await pool.query(addPadToGroupSql, [fields.groupId, fields.padName]);
+      res.send({ success: true, error: null });
+    } catch (err) {
+      log('error', 'Unhandled error in /createPad: ' + err);
+      res.status(500).send({ success: false, error: err.toString() });
     }
-    if (!fields.padName) {
-      return sendError('Pad Name not defined', res);
-    }
-
-    const authenticated = await userAuthenticatedAsync(req);
-    if (!authenticated) {
-	res.redirect('/login');
-    }
-
-    const existPadInGroupSql = "SELECT * FROM GroupPads WHERE GroupPads.GroupID = ? AND GroupPads.PadName = ?";
-    const found = await getOneValueSqlAsync(existPadInGroupSql, [fields.groupId, fields.padName]);
-
-    if (found || fields.padName.length === 0) {
-      return sendError('Pad already Exists', res);
-    }
-
-    const addPadToGroupSql = "INSERT INTO GroupPads VALUES(?, ?)";
-    const query = await pool.query(addPadToGroupSql, [fields.groupId, fields.padName]);
-    res.send({ success: true, error: null });
-
-
-  } catch (err) {
-    log('error', 'Unhandled error in /createPad: ' + err);
-    res.status(500).send({ success: false, error: err.toString() });
-  }
-});
+  });
 
   args.app.get('/home', async (req, res) => {
     try {
@@ -1520,9 +1486,11 @@ args.app.post('/createPad', async function (req, res) {
       const userid = authenticated ? req.session.userId : '';
 
       const render_args = {
+        baseUrl: `${getAppBaseUrl(req)}`,
         errors: [],
         settings,
         authenticated,
+        isAdmin: req.session?.user?.is_admin || false,
         username,
         userid,
       };
@@ -1540,13 +1508,15 @@ args.app.post('/createPad', async function (req, res) {
       var sql = 'Select Groups.*, UserGroup.Role from Groups inner join UserGroup on(UserGroup.groupID = Groups.groupID) where UserGroup.userID = ?';
       var groups = await getAllSqlAsync(sql, [req.session.userId]);
       var render_args = {
+        baseUrl: `${getAppBaseUrl(req)}`,
+        isAdmin: req.session?.user?.is_admin || false,
         username: req.session.username,
         userid: req.session.userId,
         baseurl: req.session.baseurl,
         groups: groups,
         settings: settings,
       };
-      res.send(eejs.require('ep_maadix/templates/dashboard.ejs', render_args));
+      res.send(eejs.require('ep_maadix/templates/dashboard2.ejs', render_args));
     } else {
       res.redirect('/login');
     }
@@ -1563,6 +1533,7 @@ args.app.post('/createPad', async function (req, res) {
       const settings = await getPadsSettingsAsync();
 
       const render_args = {
+        baseUrl: `${getAppBaseUrl(req)}`,
         username: req.session.username,
         userid: req.session.userId,
         baseurl: req.session.baseurl,
@@ -1575,27 +1546,33 @@ args.app.post('/createPad', async function (req, res) {
       res.status(500).send('Internal Server Error');
     }
   });
-  return cb();
-};
 
-exports.eejsBlock_adminMenu = function (hook_name, args, cb) {
-  var hasAdminUrlPrefix = args.content.indexOf('<a href="admin/') != -1,
-    hasOneDirDown = args.content.indexOf('<a href="../') != -1,
-    hasTwoDirDown = args.content.indexOf('<a href="../../') != -1,
-    urlPrefix = hasAdminUrlPrefix ? 'admin/' : hasTwoDirDown ? '../../' : hasOneDirDown ? '../' : '';
-  args.content = args.content + '<li><a href="' + urlPrefix + 'userpadadmin">Users and groups</a> </li>';
-  return cb();
-};
+  args.app.get('/settings', async (req, res) => {
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      if (!authenticated) {
+        return res.redirect('/login');
+      }
 
-exports.eejsBlock_indexWrapper = function (hook_name, args, cb) {
-  args.content = eejs.require('ep_maadix/templates/index_redirect.ejs');
-  return cb();
-};
-exports.eejsBlock_styles = function (hook_name, args, cb) {
-  args.content = args.content + eejs.require('ep_maadix/templates/styles.ejs', {}, module);
-  return cb();
-};
+      const settings = await getPadsSettingsAsync();
 
+      const render_args = {
+        baseUrl: `${getAppBaseUrl(req)}`,
+	isAdmin: req.session?.user?.is_admin || false,
+        username: req.session.username,
+        userid: req.session.userId,
+        settings,
+        errors: [],
+      };
+      res.send(eejs.require('ep_maadix/templates/settings.ejs', render_args));
+    } catch (err) {
+      console.error('Error in /settings:', err);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+
+  return cb();
+};
 var converterPad = function (UNIX_timestamp) {
   var a = new Date(UNIX_timestamp);
   var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
