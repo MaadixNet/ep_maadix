@@ -166,6 +166,7 @@ jQuery(document).ready(function () {
       });
     });
   });
+
   //Function to create a new Group. Used in dashboard.ejs
   $('#createPrivateGroupForm').submit(function (e) {
     e.preventDefault();
@@ -332,6 +333,7 @@ jQuery(document).ready(function () {
       });
     });
   });
+
   $('#formEtherpadReset').submit(function (e) {
     e.preventDefault();
     var url;
@@ -354,6 +356,49 @@ jQuery(document).ready(function () {
         }
       });
     });
+  });
+
+  $('#setSettingsForm').submit(function (e) {
+    e.preventDefault();
+    var url;
+    getBaseURL(2, function (baseurl) {
+      const data = {
+        register_enabled: $('#register_enabled').is(':checked') ? '1' : '0',
+        recover_pw: $('#recover_pw').is(':checked') ? '1' : '0',
+        public_pads: $('#public_pads').is(':checked') ? '1' : '0',
+      };
+      post(data, baseurl + 'settings', function (data) {
+        console.log('SAAAAAA' + data);
+        if (data.success) {
+          window.location = baseurl + 'settings?act=ok';
+        } else {
+          console.log('Data error: ' + data.error);
+          $('.errorUp').hide();
+          $('#setSettingsForm').before('<div class="errorUp error"><span class="arrowUp"></span><span lang="en">' + data.error + '</span></div>');
+        }
+      });
+    });
+  });
+
+  $('#adminLloginForm').submit(function (e) {
+    e.preventDefault();
+    const username = $('#username').val();
+    const password = $('#password').val();
+    console.log('US ' + username + 'PS' + password);
+    fetch('/admin-auth/', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Basic ' + btoa(username + ':' + password),
+      },
+    })
+      .then((r) => {
+        if (!r.ok) {
+          alert('Login failed');
+        } else {
+          window.location.reload();
+        }
+      })
+      .catch(console.error);
   });
 
   $('#InviteUserForm').submit(function (e) {
@@ -482,6 +527,79 @@ jQuery(document).ready(function () {
     $(this).removeAttr('readonly');
   });
 
+  $('.deleteGroup').click(function () {
+    $('#wrapper').append('<div id="overlay"></div>');
+    $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"><span' + ' class="close"><i class="demo-icon icon-cancel-circled-outline">&#xe802;</i>' + '</span></div><div id="lightBoxMain"><div class="headline">' + '<h1 lang="en" class="red">Delete "' + $(this).data('name') + '"' + '</h1></div><div class="content"><button id= "deleteGroup" data-name="' + $(this).data('name') + '" data-groupid="' + $(this).data('groupid') + '" lang="en" class="margi' + 'nRight">Delete</button><button id="cancelDelete" lang="en">Cancel</button></div>' + '</div></div>');
+    $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
+
+    $('.close').click(function () {
+      $('#overlay').remove();
+      $('#lightBox').remove();
+    });
+    $('#cancelDelete').click(function () {
+      console.log('clicked');
+      $('#overlay').remove();
+      $('#lightBox').remove();
+    });
+
+    $('#deleteGroup').click(function () {
+      var data = {};
+      getBaseURL(1, function (baseurl) {
+        var loc = document.location;
+        url = baseurl;
+        data.groupId = $('#deleteGroup').data('groupid');
+        data.groupName = $('#deleteGroup').data('name');
+        console.log('DATA' + data.groupId);
+        $.ajax({
+          type: 'POST',
+          data: JSON.stringify(data),
+          contentType: 'application/json',
+          url: url + 'deleteGroup',
+          success: function (data) {
+            if (data.success) {
+              window.location.href = loc;
+              console.log('grup deleted');
+            } else {
+              console.log(data.error);
+            }
+          },
+          error: function (xhr, ajaxOptions, thrownError) {
+            console.log(thrownError);
+          },
+        });
+      });
+    });
+  });
+  $('#InviteUserRegistration').submit(function (e) {
+    e.preventDefault();
+    var data = {};
+    var url;
+    var loc;
+    getBaseURL(2, function (baseurl) {
+      loc = document.location;
+      url = baseurl;
+      data.userEmail = $('#email').val();
+      post(data, url + 'register', function (data) {
+        if (!data.success) {
+          console.log(data.error);
+          $('#InviteUserRegistration').each(function () {
+            if ($(this).next().hasClass('errorUp')) $(this).next().remove();
+            $(this)
+              .parent()
+              .append('<div class="errorUp"><span class="arrowUp"></span><span lang="en">' + data.error + '</span></div>');
+            $('#InviteUserForm .errorUp').delay(2000).fadeOut(1000);
+          });
+        } else {
+          $('#wrapper').append('<div id="overlay"></div>');
+          $('#wrapper').append('<di="lightBox">' + '<div id="lightBoxMain"><div class="headline"></div><div class="content"><h3 lang="en"class="center">Sending invitation</h3></div></div></div>');
+
+          $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
+
+          window.location = loc;
+        }
+      });
+    });
+  });
   $('.deletePad').click(function () {
     $('#wrapper').append('<div id="overlay"></div>');
     $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"><span' + ' class="close"><i class="demo-icon icon-cancel-circled-outline">&#xe802;</i>' + '</span></div><div id="lightBoxMain"><div class="headline">' + '<h1 lang="en" class="red">Delete "' + $(this).data('padname') + '"' + '</h1></div><div class="content"><button lang="en" class="marginRight" id="deletePadButton"' + 'data-padname="' + $(this).data('padname') + '" data-groupid="' + $(this).data('groupid') + '">' + 'Delete</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');

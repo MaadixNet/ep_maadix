@@ -6,6 +6,7 @@
       "hooks": {
         "expressConfigure": "ep_maadix/admin",
         "expressCreateServer": "ep_maadix/index",
+        "padRemove": "ep_maadix/index",
         "eejsBlock_adminMenu": "ep_maadix/hooks",
         "eejsBlock_indexWrapper": "ep_maadix/hooks",
         "eejsBlock_styles": "ep_maadix/hooks"

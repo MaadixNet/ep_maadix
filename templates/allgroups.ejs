@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Groups</title>
+    <base href="<%= baseUrl %>/" />
+    <%- include('blocks/head', { settings: settings }) %>
+    <link href="/admin/assets/index-BSQTLHmC.css" rel="stylesheet" />
+  </head>
+  <body>
+    <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid  }) %>
+
+    <div id="wrapper">
+      <% if (isAdmin) { %> <% if (errors.length) { %>
+      <div class="errors">
+        <% errors.forEach(function (item) { %>
+        <div class="error"><%= item.toString() %></div>
+        <% }) %>
+      </div>
+      <% } %>
+
+      <%- include('blocks/settings-menu', { settings: settings }) %>
+      <div class="innerwrapper">
+        <article class="content items-list-page">
+          <div id="main">
+            <div class="inside">
+              <div class="inputBlock">
+                <h3>Groups</h3>
+                <%if (groups.length > 0) {%>
+                <table class="card items">
+                  <thead>
+                    <tr>
+                      <th>Group</th>
+                      <th>Manage Users</th>
+                      <th>Delete</th>
+                    </tr>
+
+                    <tr></tr>
+                  </thead>
+                  <% for(var i = 1; i <= groups.length; i++){%>
+                  <tr class="visible" id="Gruppe<%= groups[i-1].groupID%>" data-role="<%= groups[i-1].Role%>">
+                    <td class="first"><a href="group/<%= groups[i-1].groupID%>"><%= groups[i-1].name%></a></td>
+                    <td class="first"><a href="groupusers/<%= groups[i-1].groupID%>">View Users</a></td>
+                    <td title="Delete Group" class="last">
+                      <a data-groupid="<%=groups[i-1].groupID%>" data-name="<%=groups[i-1].name%>" class="deleteGroup"><i class="demo-icon icon-trash">&#xe801;</i></a>
+                    </td>
+                  </tr>
+                  <% } %>
+                </table>
+                <%} else {%>
+                <h4 class="red" lang="en">You are in no Group at the moment.</h4>
+                <%}%>
+                <div style="clear: both"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </body>
+</html>

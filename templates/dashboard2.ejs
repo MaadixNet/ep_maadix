@@ -47,7 +47,7 @@
             <td class="first"><a href="group/<%= groups[i-1].groupID%>">View/Add Pads</a></td>
             <%if (groups[i-1].Role == 1) {%>
             <td title="Delete Group" class="last">
-              <a data-groupid="<%=groups[i-1].groupID%>" data-name="<%=groups[i-1].name%>" class="delete"><i class="demo-icon icon-trash">&#xe801;</i></a>
+              <a data-groupid="<%=groups[i-1].groupID%>" data-name="<%=groups[i-1].name%>" class="deleteGroup"><i class="demo-icon icon-trash">&#xe801;</i></a>
             </td>
             <%} else {%>
             <td class="last"><i class="demo-icon icon-block">&#xe81c;</i></td>
@@ -83,49 +83,6 @@
             error: function (xhr, ajaxOptions, thrownError) {
               console.log(thrownError);
             },
-          });
-        });
-
-        $('.delete').click(function () {
-          $('#wrapper').append('<div id="overlay"></div>');
-          $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"><span' + ' class="close"><i class="demo-icon icon-cancel-circled-outline">&#xe802;</i>' + '</span></div><div id="lightBoxMain"><div class="headline">' + '<h1 lang="en" class="red">Delete "' + $(this).data('name') + '"' + '</h1></div><div class="content"><button id= "deleteGroup" data-name="' + $(this).data('name') + '" data-groupid="' + $(this).data('groupid') + '" lang="en" class="margi' + 'nRight">Delete</button><button id="cancelDelete" lang="en">Cancel</button></div>' + '</div></div>');
-          $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
-
-          $('.close').click(function () {
-            $('#overlay').remove();
-            $('#lightBox').remove();
-          });
-          $('#cancelDelete').click(function () {
-            console.log('clicked');
-            $('#overlay').remove();
-            $('#lightBox').remove();
-          });
-
-          $('#deleteGroup').click(function () {
-            var data = {};
-            getBaseURL(1, function (baseurl) {
-              var loc = document.location;
-              url = baseurl;
-              data.groupId = $('#deleteGroup').data('groupid');
-              data.groupName = $('#deleteGroup').data('name');
-              $.ajax({
-                type: 'POST',
-                data: JSON.stringify(data),
-                contentType: 'application/json',
-                url: url + 'deleteGroup',
-                success: function (data) {
-                  if (data.success) {
-                    window.location.href = loc;
-                    console.log('grup deleted');
-                  } else {
-                    console.log(data.error);
-                  }
-                },
-                error: function (xhr, ajaxOptions, thrownError) {
-                  console.log(thrownError);
-                },
-              });
-            });
           });
         });
       });

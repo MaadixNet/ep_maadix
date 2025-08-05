@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Groups</title>
+    <base href="<%= baseUrl %>/" />
+    <%- include('blocks/head', { settings: settings }) %>
+    <link href="/admin/assets/index-BSQTLHmC.css" rel="stylesheet" />
+  </head>
+  <body>
+    <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid  }) %>
+
+    <div id="wrapper">
+      <% if (isAdmin) { %> <% if (errors.length) { %>
+      <div class="errors">
+        <% errors.forEach(function (item) { %>
+        <div class="error"><%= item.toString() %></div>
+        <% }) %>
+      </div>
+      <% } %>
+
+      <%- include('blocks/settings-menu', { settings: settings }) %>
+      <div class="innerwrapper">
+        <article class="content items-list-page">
+          <div id="main">
+            <div class="inside">
+              <div class="inputBlock">
+                <div class="row">
+                  <div class="col-md-9">
+                    <div class="inputBlock">
+                      <h4 lang="en" class="margintrop0">Invite user to register. An email will be sent with instructions to complete registration.</h4>
+                      <form id="InviteUserRegistration" class="margin20">
+                        <input type="mail" placeholder="User email" id="email" autocomplete="off" required />
+                        <div style="clear: both"></div>
+                        <button type="submit" lang="en" id="InviteUserRegistration">Invite User</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+                <h1>Users</h1>
+
+                <%if (users.length > 0) {%>
+                <table class="card items">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>Remove</th>
+                    </tr>
+
+                    <tr></tr>
+                  </thead>
+                  <% for(var i = 1; i <= users.length; i++){%>
+                  <tr>
+                    <td class="first"><%= users[i-1].name%></td>
+                    <td class="editDate"><%=users[i-1].email%></td>
+                    <td class="editDate"><%if (users[i-1].active == 1) {%>Active<%}else {%>Inactive<%}%></td>
+                    <td title="Delete User" class="last">
+                      <a data-userid="<%=users[i-1].userID%>" data-username="<%=users[i-1].name%>" id="remove" class="delete"><i class="demo-icon icon-trash">&#xe801;</i></a>
+                    </td>
+                  </tr>
+                  <% } %>
+                </table>
+
+                <%} else {%>
+                <h4 class="red" lang="en">There are no users yet</h4>
+                <%}%>
+
+                <div style="clear: both"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </body>
+</html>

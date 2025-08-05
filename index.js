@@ -18,6 +18,7 @@ const multer = require('multer');
 var path = require('path');
 var eejs = require('ep_etherpad-lite/node/eejs');
 var padManager = require('ep_etherpad-lite/node/db/PadManager');
+var Pad = require('ep_etherpad-lite/node/db/Pad');
 var db = require('ep_etherpad-lite/node/db/DB').db;
 var groupManager = require(__dirname + '/GroupManager');
 var api = require('ep_etherpad-lite/node/db/API');
@@ -131,13 +132,7 @@ async function mailTransporterAsync() {
   });
 }
 
-
-async function getPasswordAsyncVersion({
-  length = 12,
-  extraChars = '',
-  first = { number: true, lower: true, upper: true, other: false },
-  latter = { number: true, lower: true, upper: true, other: false }
-  } = {}) {
+async function getPasswordAsyncVersion({ length = 12, extraChars = '', first = { number: true, lower: true, upper: true, other: false }, latter = { number: true, lower: true, upper: true, other: false } } = {}) {
   if (length <= 0) return '';
 
   let password = '';
@@ -356,9 +351,48 @@ async function getUsersOfGroupAsync(groupId, userId) {
     return [];
   }
 }
+// If a pad is deleted from admin and is a group pad, remove it from the GrouPads table
+exports.padRemove = async (hookName, context) => {
+  const padID = context.pad.id;
+  console.log('Pad being removed:', padID);
+
+  if (padID.includes('$')) {
+    console.log("It's a group pad.");
+
+    const etherpadGroupId = padID.substring(0, padID.indexOf('$'));
+    const padName = padID.substring(padID.indexOf('$') + 1);
+    const groupID = await getInternalGroupIdFromEtherpadGroupId(etherpadGroupId);
+    console.log('GroupID:', groupID, 'PadName:', padName);
+
+    try {
+      const [result] = await pool.query('DELETE FROM GroupPads WHERE GroupPads.PadName = ? AND GroupPads.GroupID = ?', [padName, groupID]);
+      console.log('Deleted rows:', result.affectedRows);
+    } catch (err) {
+      console.error('Error deleting from GroupPads:', err);
+    }
+  }
+};
+async function getInternalGroupIdFromEtherpadGroupId(etherpadGroupId) {
+  // Read all mapgroups (mapper2group)
+  const entries = await db.findKeys('mapper2group:*', null);
+
+  for (const key of entries) {
+    // Get the etherpadGroupId
+    const value = await db.get(key);
+    if (value === etherpadGroupId) {
+      // Get required id
+      const mapper = key.split(':')[1];
+      return parseInt(mapper, 10);
+    }
+  }
+
+  return null;
+}
 async function deletePadFromEtherpadAsync(name, groupId) {
   const group = await getEtherpadGroupFromNormalGroupAsync(groupId);
-  await padManager.removePad(`${group}$${name}`);
+  padId = `${group}$${name}`;
+  const pad = await padManager.getPad(padId);
+  await pad.remove();
   log('debug', 'Pad deleted');
 }
 /*
@@ -385,31 +419,6 @@ function getRandomChar(number, lower, upper, other, extra) {
   if (other == true) charSet += otherChars;
   return charSet.charAt(getRandomNum(0, charSet.length));
 }
-
-function setSetting(key, value, cb) {
-  log('debug', 'set setting ' + key + ' to value ' + value);
-  var setSettingsSql = 'UPDATE Settings SET Settings.value = ? WHERE Settings.key = ?';
-  var setSettingsQuery = connection2.query(setSettingsSql, [value, key]);
-
-  setSettingsQuery.on('error', function (err) {
-    mySqlErrorHandler(err);
-    var retval = {
-      success: false,
-    };
-    cb(retval);
-  });
-  setSettingsQuery.on('end', function () {
-    var retval = {
-      success: true,
-    };
-    cb(retval);
-  });
-}
-/*
-| public_pads      |     1 |
-| recover_pw       |     1 |
-| register_enabled |     1 |
-*/
 
 async function asyncDeleteGroup(id) {
   try {
@@ -611,7 +620,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         render_args.errors.push('Wrong user or password!');
       }
     }
-    console.log('·····················3' + render_args.errors);
     res.send(eejs.require('ep_maadix/templates/login2.ejs', render_args));
   });
 
@@ -790,7 +798,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       try {
         var sql = 'SELECT * from User where User.email = ? AND confirmationString = ?';
         const exists = await checkIfUserExistsAsync(sql, [userEmail, tok]);
-        console.log('ERRRRRRR', exists);
         if (!exists) {
           sendError('You cannot reset password for this email account', res);
           return;
@@ -805,7 +812,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
           if (success) {
             var data = {};
             data.success = success;
-            console.log('DATATATATA ' + data);
             res.send(data);
           }
         }
@@ -827,7 +833,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         // Check if user is in group
         const pads = await getPadsOfGroupAsync(req.params.groupid);
         const currUser = await getUserAsync(req.session.userId);
-        console.log('currUser. ' + currUser.name);
         // Check if current user is in group
         const currUserGroup = await getUserGroupAsync(req.params.groupid, req.session.userId);
         console.log('currUserGroup ' + currUserGroup);
@@ -835,11 +840,13 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         if (currGroup && currUser && currUserGroup != null) {
           render_args = {
             errors: [],
+            baseUrl: `${getAppBaseUrl(req)}`,
             id: currGroup.name,
-            isAdmin: req.session?.user?.is_admin || false, 
+            isAdmin: req.session?.user?.is_admin || false,
             groupid: currGroup.groupID,
             userid: req.session.userId,
             username: req.session.username,
+            authenticated: authenticated,
             role: currUserGroup.Role,
             pads: pads,
             settings: settings,
@@ -848,9 +855,10 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         } else {
           render_args = {
             errors: [],
+            baseUrl: `${getAppBaseUrl(req)}`,
             id: false,
             groupid: false,
-	    isAdmin: req.session?.user?.is_admin || false,
+            isAdmin: req.session?.user?.is_admin || false,
             userid: req.session.userId,
             username: req.session.username,
             baseurl: req.session.baseurl,
@@ -876,6 +884,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       if (!authenticated) {
         res.redirect(`${getAppBaseUrl(req)}` + '/login');
+        return;
       }
 
       const groupId = req.params.groupid;
@@ -895,6 +904,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         groupid: currGroup?.groupID || false,
         userid: userId,
         username: req.session.username,
+        authenticated: authenticated,
         isAdmin: req.session?.user?.is_admin || false,
         baseUrl: `${getAppBaseUrl(req)}`,
         role: currUserGroup?.Role || false,
@@ -965,7 +975,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
   args.app.post('/deletePad', async function (req, res) {
     const { groupId, padName } = req.body;
-    console.log('GROP ' + groupId + 'pad ' + padName);
     const data = {};
 
     try {
@@ -997,42 +1006,45 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   });
 
   args.app.post('/deleteGroup', async (req, res) => {
-    try {
-      const authenticated = await userAuthenticatedAsync(req);
-      if (!authenticated) return res.send('You are not logged in!!');
+    const authenticated = await userAuthenticatedAsync(req);
+    const isAdmin = req.session?.user?.is_admin || false;
+    if (isAdmin || authenticated) {
+      try {
+        const { groupId } = req.body;
+        if (!groupId) return sendError('Group-Id not defined', res);
 
-      const { groupId } = req.body;
-      if (!groupId) return sendError('Group-Id not defined', res);
+        if (!isAdmin) {
+          const userGroup = await getAllSqlAsync('SELECT * FROM UserGroup WHERE userID = ? AND groupID = ?', [req.session.userId, groupId]);
+          if (!userGroup || userGroup.length === 0) {
+            return sendError('You are not in this Group.', res);
+          }
 
-      const userGroup = await getAllSqlAsync('SELECT * FROM UserGroup WHERE userID = ? AND groupID = ?', [req.session.userId, groupId]);
+          if (userGroup[0].Role !== 1) {
+            return sendError('User is not Owner. Can not delete Group', res);
+          }
+        }
+        // Delete from Groups
+        await pool.query('DELETE FROM Groups WHERE groupID = ?', [groupId]);
 
-      if (!userGroup || userGroup.length === 0) {
-        return sendError('You are not in this Group.', res);
+        // Delete from UserGroup
+        await pool.query('DELETE FROM UserGroup WHERE groupID = ?', [groupId]);
+
+        // Delete from GroupPads
+        await pool.query('DELETE FROM GroupPads WHERE groupID = ?', [groupId]);
+
+        // Call asyncDeleteGroup
+        await asyncDeleteGroup(groupId);
+
+        res.send({
+          success: true,
+          error: null,
+        });
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        sendError('Unexpected error during group deletion', res);
       }
-
-      if (userGroup[0].Role !== 1) {
-        return sendError('User is not Owner. Can not delete Group', res);
-      }
-
-      // Delete from Groups
-      await pool.query('DELETE FROM Groups WHERE groupID = ?', [groupId]);
-
-      // Delete from UserGroup
-      await pool.query('DELETE FROM UserGroup WHERE groupID = ?', [groupId]);
-
-      // Delete from GroupPads
-      await pool.query('DELETE FROM GroupPads WHERE groupID = ?', [groupId]);
-
-      // Call asyncDeleteGroup
-      await asyncDeleteGroup(groupId);
-
-      res.send({
-        success: true,
-        error: null,
-      });
-    } catch (error) {
-      console.error('Error deleting group:', error);
-      sendError('Unexpected error during group deletion', res);
+    } else {
+      return res.send('You are not logged in!!');
     }
   });
 
@@ -1080,7 +1092,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         pad_name: padname,
       };
 
-      console.log(data);
       res.send(data);
     } catch (err) {
       console.error('Error in /directToPad:', err);
@@ -1112,6 +1123,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         padname: padExists.length ? padID : false,
         userid: userID,
         username: req.session.username,
+        authenticated: authenticated,
+        isAdmin: req.session?.user?.is_admin || false,
         baseurl: req.session.baseurl,
         groupID: foundGroup ? groupID : false,
         groupName: foundGroup ? foundGroup.name : false,
@@ -1194,11 +1207,9 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         }
 
         const { success, error } = await registerInvitedUserAsync(user);
-        console.log('SSSSSSSSSSSSSS ' + success);
         if (success) {
           var data = {};
           data.success = success;
-          console.log('DATATATATA ' + data);
           res.send(data);
         } else if (error) {
           sendError(error, res);
@@ -1257,11 +1268,11 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       }
 
       const user = await getUserAsync(req.session.userId);
-      console.log('EEEEEE' + user);
       const render_args = {
         errors: [],
         userid: req.session.userId,
         user: user,
+        authenticated: authenticated,
         isAdmin: req.session?.user?.is_admin || false,
         settings,
         baseUrl: `${getAppBaseUrl(req)}`,
@@ -1503,7 +1514,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   });
 
   args.app.get('/dashboard', async (req, res) => {
-    if (await userAuthenticatedAsync(req)) {
+    const authenticated = await userAuthenticatedAsync(req);
+    if (authenticated) {
       var settings = await getPadsSettingsAsync();
       var sql = 'Select Groups.*, UserGroup.Role from Groups inner join UserGroup on(UserGroup.groupID = Groups.groupID) where UserGroup.userID = ?';
       var groups = await getAllSqlAsync(sql, [req.session.userId]);
@@ -1511,6 +1523,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         baseUrl: `${getAppBaseUrl(req)}`,
         isAdmin: req.session?.user?.is_admin || false,
         username: req.session.username,
+        authenticated: authenticated,
         userid: req.session.userId,
         baseurl: req.session.baseurl,
         groups: groups,
@@ -1534,7 +1547,9 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       const render_args = {
         baseUrl: `${getAppBaseUrl(req)}`,
+        isAdmin: req.session?.user?.is_admin || false,
         username: req.session.username,
+        authenticated: authenticated,
         userid: req.session.userId,
         baseurl: req.session.baseurl,
         settings,
@@ -1547,18 +1562,21 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     }
   });
 
+  /****************** admin views *******************/
   args.app.get('/settings', async (req, res) => {
     try {
       const authenticated = await userAuthenticatedAsync(req);
+      /*
       if (!authenticated) {
         return res.redirect('/login');
       }
-
+      */
       const settings = await getPadsSettingsAsync();
 
       const render_args = {
         baseUrl: `${getAppBaseUrl(req)}`,
-	isAdmin: req.session?.user?.is_admin || false,
+        isAdmin: req.session?.user?.is_admin || false,
+        authenticated: authenticated,
         username: req.session.username,
         userid: req.session.userId,
         settings,
@@ -1569,6 +1587,147 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       console.error('Error in /settings:', err);
       res.status(500).send('Internal Server Error');
     }
+  });
+
+  args.app.post('/settings', async function (req, res) {
+    const data = {};
+
+    try {
+      const user = req.session?.user;
+      if (!user || !user.is_admin) {
+        data.success = false;
+        data.error = 'Unauthorized';
+        return res.send(data);
+      }
+
+      const keys = ['register_enabled', 'recover_pw', 'public_pads'];
+      const currentSettings = await getPadsSettingsAsync();
+      const updates = {};
+
+      for (const key of keys) {
+        console.log('key ' + key + 'value ' + req.body[key]);
+        const newValue = req.body[key] === '1' ? 1 : 0;
+        const currentValue = parseInt(currentSettings[key], 10) || 0;
+        console.log('iCurrent value  ' + currentValue);
+
+        if (newValue !== currentValue) {
+          updates[key] = newValue;
+        }
+      }
+
+      const results = {};
+      for (const [key, value] of Object.entries(updates)) {
+        results[key] = await setSettings(key, value);
+
+        // Manejo especial para public_pads
+        if (key === 'public_pads') {
+          const sessionReqValue = value === 0 ? 'true' : 'false';
+          const settingsPath = path.resolve(process.cwd(), '../settings.json');
+          const datajs = await fs.promises.readFile(settingsPath, 'utf8');
+
+          const result = datajs.replace(/"requireSession"\s*:\s*(true|false)/, `"requireSession": ${sessionReqValue}`);
+
+          if (IsJsonString(result)) {
+            await fs.promises.writeFile(settingsPath, result, 'utf8');
+          } else {
+            data.success = false;
+            data.error = 'Malformed settings file';
+            return res.send(data);
+          }
+        }
+      }
+
+      const success = Object.values(results).every((r) => r.success);
+      data.success = success;
+      data.updated = Object.keys(updates);
+      if (!success) data.error = 'Some updates failed';
+      return res.send(data);
+    } catch (err) {
+      console.error(err);
+      data.success = false;
+      data.error = 'Internal server error';
+      return res.send(data);
+    }
+  });
+  /*
+| public_pads      |     1 |
+| recover_pw       |     1 |
+| register_enabled |     1 |
+*/
+
+  async function setSettings(key, value) {
+    log('debug', `set setting ${key} to value ${value}`);
+
+    const sql = 'UPDATE Settings SET Settings.value = ? WHERE Settings.key = ?';
+
+    try {
+      await pool.query(sql, [value, key]);
+      return { success: true };
+    } catch (err) {
+      mySqlErrorHandler(err);
+      return { success: false };
+    }
+  }
+  function IsJsonString(data) {
+    var cleanSettings = JSON.minify(data);
+    cleanSettings = cleanSettings.replace(',]', ']').replace(',}', '}');
+    try {
+      JSON.parse(cleanSettings);
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+  args.app.get('/allgroups', async (req, res) => {
+    const authenticated = await userAuthenticatedAsync(req);
+    const isAdmin = req.session?.user?.is_admin || false;
+    const baseUrl = `${getAppBaseUrl(req)}`;
+    const reidrectTo = `${baseUrl}/login`;
+    if (!isAdmin) {
+      return res.redirect(reidrectTo);
+    }
+
+    var settings = await getPadsSettingsAsync();
+    var sql = 'Select * from Groups';
+    var groups = await getAllSqlAsync(sql, [req.session.userId]);
+    var render_args = {
+      baseUrl: baseUrl,
+      isAdmin: isAdmin,
+      authenticated: authenticated,
+      username: req.session.username,
+      userid: req.session.userId,
+      baseurl: req.session.baseurl,
+      groups: groups,
+      settings: settings,
+      errors: [],
+    };
+    res.send(eejs.require('ep_maadix/templates/allgroups.ejs', render_args));
+  });
+
+  args.app.get('/allusers', async (req, res) => {
+    const authenticated = await userAuthenticatedAsync(req);
+    const isAdmin = req.session?.user?.is_admin || false;
+    const baseUrl = `${getAppBaseUrl(req)}`;
+    const reidrectTo = `${baseUrl}/login`;
+    if (!isAdmin) {
+      return res.redirect(reidrectTo);
+    }
+
+    var settings = await getPadsSettingsAsync();
+    var sql = 'Select * from User';
+    var users = await getAllSqlAsync(sql, [req.session.userId]);
+    var render_args = {
+      baseUrl: baseUrl,
+      isAdmin: isAdmin,
+      authenticated: authenticated,
+      username: req.session.username,
+      userid: req.session.userId,
+      baseurl: req.session.baseurl,
+      users: users,
+      settings: settings,
+      errors: [],
+    };
+    res.send(eejs.require('ep_maadix/templates/allusers.ejs', render_args));
   });
 
   return cb();
