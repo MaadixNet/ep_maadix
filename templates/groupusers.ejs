@@ -77,7 +77,11 @@
                                                     <% } %>
                                                 </td>
                                                 <td class="editDate">
-                                                <%if (users[i-1].active == 1) {%>Active<%}else {%>Inactive<%}%>
+						<% if (users[i - 1].active == 1) { %>
+						  <button class="toggle-user-status-btn active" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Deactivate account">Active</button>
+						<% } else { %>
+						  <button class="toggle-user-status-btn inactive" data-userid="<%= users[i - 1].userID %>" data-status="0" title="Activate account">Inactive</button>
+						 <% } %>
                                                 </td>
                                                 <%if (role < 3) {%>
 						<td title="Delete User" class="last">

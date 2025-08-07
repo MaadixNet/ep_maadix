@@ -101,7 +101,32 @@ var userRole = function (numrole) {
 };
 
 jQuery(document).ready(function () {
-  // minimize the elements
+  document.querySelectorAll('.toggle-status-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const userId = button.dataset.userid;
+      const currentStatus = button.dataset.status;
+      const newStatus = currentStatus === '1' ? 0 : 1;
+
+      try {
+        const res = await fetch('/toggle-user-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, newStatus }),
+        });
+
+        if (res.ok) {
+          location.reload(); // Recarga para ver el cambio (puede mejorarse)
+        } else {
+          alert('Error updating status');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Request failed');
+      }
+    });
+  }); // minimize the elements
   $('#minimize').click(function () {
     $('header').delay(0).slideUp(800);
     $('#groupNav').delay(0).slideUp(800);
@@ -570,6 +595,42 @@ jQuery(document).ready(function () {
       });
     });
   });
+
+  /* Cahnge user status
+   *  Users can be activated -deactivated
+   */
+
+  document.querySelectorAll('.toggle-user-status-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      getBaseURL(2, function (baseurl) {
+        const data = {
+          userId: button.dataset.userid,
+          currentStatus: button.dataset.status, // string: "0" or "1"
+          newStatus: button.dataset.status === '1' ? 0 : 1, // number: 0 or 1
+        };
+
+        console.log('Data sent:', data);
+        $.ajax({
+          type: 'POST',
+          data: JSON.stringify(data),
+          contentType: 'application/json',
+          url: '/updateUserStatus',
+          success: function (data) {
+            if (data.success) {
+              window.location.href = document.location;
+              console.log('User updated');
+            } else {
+              console.log(data.error);
+            }
+          },
+          error: function (xhr, ajaxOptions, thrownError) {
+            console.log(thrownError);
+          },
+        });
+      });
+    });
+  });
+
   $('#InviteUserRegistration').submit(function (e) {
     e.preventDefault();
     var data = {};

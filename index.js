@@ -87,18 +87,13 @@ const mysql2 = require('mysql2/promise');
 
 //let conn;
 let pool;
-/*
-async function initConnection() {
-  conn = await mysql2.createConnection(dbAuthParams);
-}
-*/
 async function initPoolConnection() {
   pool = await mysql2.createPool(dbAuthParams);
 }
 // Start database Pool connection
 initPoolConnection()
   .then(() => {
-    console.log('MySQL Pool connected');
+    log('debug', 'MySQL Pool connected');
     // Aquí arrancas el servidor o el resto del código
   })
   .catch((err) => {
@@ -431,57 +426,6 @@ async function asyncDeleteGroup(id) {
     log('error', err);
     return false;
   }
-}
-
-function mapAuthorWithDBKey(mapperkey, mapper, callback) {
-  //try to map to an author
-  db.get(mapperkey + ':' + mapper, function (err, author) {
-    if (err) {
-      callback(err);
-      return;
-    }
-    //there is no author with this mapper, so create one
-    if (author == null) {
-      authorManager.createAuthor(null, function (err, author) {
-        if (err) {
-          callback(err);
-          return;
-        }
-
-        //create the token2author relation
-        db.set(mapperkey + ':' + mapper, author.authorID);
-
-        //return the author
-        callback(null, author);
-      });
-    }
-    //there is a author with this mapper
-    else {
-      //update the timestamp of this author
-      db.setSub('globalAuthor:' + author, ['timestamp'], new Date().getTime());
-
-      //return the author
-      callback(null, { authorID: author });
-    }
-  });
-}
-
-function deleteUserFromEtherPad(userid, cb) {
-  mapAuthorWithDBKey('mapper2author', userid, function (err, author) {
-    db.remove('globalAuthor:' + author.authorID);
-    var mapper2authorSql = 'DELETE FROM store where store.key = ?';
-    var mapper2authorQuery = connection2.query(mapper2authorSql, ['mapper2author:' + userid]);
-    mapper2authorQuery.on('error', mySqlErrorHandler);
-    mapper2authorQuery.on('end', function () {
-      var token2authorSql = "DELETE FROM store where store.value = ? and store.key like 'token2author:%'";
-      var token2authorQuery = connection2.query(token2authorSql, ['"' + author.authorID] + '"');
-      token2authorQuery.on('error', mySqlErrorHandler);
-      token2authorQuery.on('end', function () {
-        log('debug', 'User deleted');
-        cb();
-      });
-    });
-  });
 }
 
 const userAuthentication = async function (username, password) {
@@ -1257,6 +1201,34 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     }
   });
 
+  args.app.post('/updateUserStatus', async (req, res) => {
+    const data = {};
+    console.log('RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRr');
+    const authenticated = await userAuthenticatedAsync(req);
+    const isAdmin = req.session?.user?.is_admin || false;
+    if (isAdmin || authenticated) {
+      try {
+        const { userId, newStatus } = req.body;
+        console.log('URERRRR' + newStatus);
+        const baseurl = `${getAppBaseUrl(req)}`;
+        if (!userId || typeof newStatus === 'undefined') {
+          return sendError('Missing parameters', res);
+        }
+
+        await pool.query('UPDATE User SET confirmed=1,  active=? WHERE userID = ?', [newStatus, userId]);
+
+        data.success = true;
+        data.error = null;
+        res.send(data);
+      } catch (err) {
+        console.error('Error in /updateUserRole:', err);
+        sendError('Internal server error', res);
+      }
+    } else {
+      return res.send('You are not logged in!!');
+    }
+  });
+
   args.app.get('/user/:userId', async (req, res) => {
     try {
       const data = {};
@@ -1679,29 +1651,34 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     return true;
   }
   args.app.get('/allgroups', async (req, res) => {
-    const authenticated = await userAuthenticatedAsync(req);
-    const isAdmin = req.session?.user?.is_admin || false;
-    const baseUrl = `${getAppBaseUrl(req)}`;
-    const reidrectTo = `${baseUrl}/login`;
-    if (!isAdmin) {
-      return res.redirect(reidrectTo);
-    }
+    try {
+      const authenticated = await userAuthenticatedAsync(req);
+      const isAdmin = req.session?.user?.is_admin || false;
+      const baseUrl = `${getAppBaseUrl(req)}`;
+      const reidrectTo = `${baseUrl}/login`;
+      if (!isAdmin) {
+        return res.redirect(reidrectTo);
+      }
 
-    var settings = await getPadsSettingsAsync();
-    var sql = 'Select * from Groups';
-    var groups = await getAllSqlAsync(sql, [req.session.userId]);
-    var render_args = {
-      baseUrl: baseUrl,
-      isAdmin: isAdmin,
-      authenticated: authenticated,
-      username: req.session.username,
-      userid: req.session.userId,
-      baseurl: req.session.baseurl,
-      groups: groups,
-      settings: settings,
-      errors: [],
-    };
-    res.send(eejs.require('ep_maadix/templates/allgroups.ejs', render_args));
+      var settings = await getPadsSettingsAsync();
+      var sql = 'Select * from Groups';
+      var groups = await getAllSqlAsync(sql, [req.session.userId]);
+      var render_args = {
+        baseUrl: baseUrl,
+        isAdmin: isAdmin,
+        authenticated: authenticated,
+        username: req.session.username,
+        userid: req.session.userId,
+        baseurl: req.session.baseurl,
+        groups: groups,
+        settings: settings,
+        errors: [],
+      };
+      res.send(eejs.require('ep_maadix/templates/allgroups.ejs', render_args));
+    } catch (err) {
+      console.error('Error in /settings:', err);
+      res.status(500).send('Internal Server Error');
+    }
   });
 
   args.app.get('/allusers', async (req, res) => {
@@ -1729,6 +1706,79 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     };
     res.send(eejs.require('ep_maadix/templates/allusers.ejs', render_args));
   });
+
+  args.app.post('/deleteUserFromEtherpad', async function (req, res) {
+    const isAdmin = req.session?.user?.is_admin || false;
+
+    if (!isAdmin) {
+      return sendError('You must be logged in as etherpad-lite admin to perform this action.', res);
+    }
+
+    try {
+      const { userID } = req.body;
+
+      // Validate Userid
+      const parsedUserId = parseInt(userID, 10);
+      if (!userID || isNaN(parsedUserId) || parsedUserId <= 0) {
+        return sendError('Invalid User ID.', res);
+      }
+      const deleted = await deleteUserFromEtherPad(userID);
+      // Solo ejecutar el DELETE si deleteUserFromEtherPad no lanza error y devuelve algo válido
+      if (deleted) {
+        await pool.query('DELETE FROM UserGroup WHERE userID = ?', [userID]);
+        await pool.query('DELETE FROM User WHERE userID = ?', [userID]);
+      }
+
+      res.send({ success: true });
+    } catch (err) {
+      console.error(err);
+      sendError('An error occurred while deleting the user from the group.', res);
+    }
+  });
+
+  async function deleteUserFromEtherPad(userid) {
+    try {
+      const author = await mapAuthorWithDBKeyAsync('mapper2author', userid);
+
+      await db.remove('globalAuthor:' + author.authorID);
+
+      // Eliminar el mapeo mapper2author
+      const mapper2authorSql = 'DELETE FROM store WHERE store.key = ?';
+      await pool.query(mapper2authorSql, [`mapper2author:${userid}`]);
+
+      // Eliminar la relación token2author
+      const token2authorSql = "DELETE FROM store WHERE store.value = ? AND store.key LIKE 'token2author:%'";
+      await pool.query(token2authorSql, ['"' + author.authorID + '"']);
+
+      log('debug', 'User deleted');
+      return true;
+    } catch (err) {
+      log('error', 'Error deleting user from Etherpad:', err);
+      return false;
+    }
+  }
+  async function mapAuthorWithDBKeyAsync(mapperkey, mapper) {
+    try {
+      const author = await db.get(`${mapperkey}:${mapper}`);
+
+      if (author == null) {
+        // No author found, create one
+        const newAuthor = await authorManager.createAuthor(null);
+
+        // Store the new mapping
+        await db.set(`${mapperkey}:${mapper}`, newAuthor.authorID);
+
+        return newAuthor;
+      } else {
+        // Author exists, update timestamp
+        await db.setSub(`globalAuthor:${author}`, ['timestamp'], Date.now());
+
+        return { authorID: author };
+      }
+    } catch (err) {
+      throw err;
+    }
+  }
 
   return cb();
 };
