@@ -20,7 +20,8 @@ var eejs = require('ep_etherpad-lite/node/eejs');
 var padManager = require('ep_etherpad-lite/node/db/PadManager');
 var Pad = require('ep_etherpad-lite/node/db/Pad');
 var db = require('ep_etherpad-lite/node/db/DB').db;
-var groupManager = require(__dirname + '/GroupManager');
+//var groupManager = require(__dirname + '/GroupManager');
+var groupManager = require('ep_etherpad-lite/node/db/GroupManager');
 var api = require('ep_etherpad-lite/node/db/API');
 var Changeset = require('ep_etherpad-lite/static/js/Changeset');
 var mysql = require('mysql2');
@@ -30,8 +31,6 @@ var authorManager = require('ep_etherpad-lite/node/db/AuthorManager');
 var sessionManager = require('ep_etherpad-lite/node/db/SessionManager');
 var crypto = require('crypto');
 var pkg = require('./package.json');
-// TODO: Remove once updated all forms
-//var formidable = require("formidable");
 var fs = require('fs');
 const util = require('util');
 
@@ -68,7 +67,6 @@ var log = function (type, message) {
 
 var mySqlErrorHandler = function (err) {
   log('debug', 'mySqlErrorHandler');
-  // TODO: Review error handling
   var msg;
   if ('fileName' in err && lineNumber in err) {
     msg = 'MySQLError in ' + err.fileName + ' line ' + err.lineNumber + ': ';
@@ -82,10 +80,8 @@ var mySqlErrorHandler = function (err) {
   log('error', msg);
 };
 
-//const queryAsync = util.promisify(connection.query).bind(connection);
 const mysql2 = require('mysql2/promise');
 
-//let conn;
 let pool;
 async function initPoolConnection() {
   pool = await mysql2.createPool(dbAuthParams);
@@ -94,7 +90,6 @@ async function initPoolConnection() {
 initPoolConnection()
   .then(() => {
     log('debug', 'MySQL Pool connected');
-    // Aquí arrancas el servidor o el resto del código
   })
   .catch((err) => {
     console.error('Error connecting to MySQL:', err);
@@ -349,15 +344,11 @@ async function getUsersOfGroupAsync(groupId, userId) {
 // If a pad is deleted from admin and is a group pad, remove it from the GrouPads table
 exports.padRemove = async (hookName, context) => {
   const padID = context.pad.id;
-  console.log('Pad being removed:', padID);
 
   if (padID.includes('$')) {
-    console.log("It's a group pad.");
-
     const etherpadGroupId = padID.substring(0, padID.indexOf('$'));
     const padName = padID.substring(padID.indexOf('$') + 1);
     const groupID = await getInternalGroupIdFromEtherpadGroupId(etherpadGroupId);
-    console.log('GroupID:', groupID, 'PadName:', padName);
 
     try {
       const [result] = await pool.query('DELETE FROM GroupPads WHERE GroupPads.PadName = ? AND GroupPads.GroupID = ?', [padName, groupID]);
@@ -367,6 +358,7 @@ exports.padRemove = async (hookName, context) => {
     }
   }
 };
+
 async function getInternalGroupIdFromEtherpadGroupId(etherpadGroupId) {
   // Read all mapgroups (mapper2group)
   const entries = await db.findKeys('mapper2group:*', null);
@@ -418,6 +410,17 @@ function getRandomChar(number, lower, upper, other, extra) {
 async function asyncDeleteGroup(id) {
   try {
     const group = await getEtherpadGroupFromNormalGroupAsync(id);
+    // Old versionbs of thisplugin did not correctly create groupads
+    // So, whe a group is delete w now make shure that all pads in the group are also deleted
+    const [pads] = await pool.query('SELECT PadName FROM GroupPads WHERE GroupID = ?', id);
+    for (const row of pads) {
+      await deletePadFromEtherpadAsync(row.PadName, id);
+    }
+    /*
+    await Promise.all(
+  	pads.map(row => deletePadFromEtherpadAsync(row.PadName, id))
+    );
+*/
     await groupManager.deleteGroup(group);
     log('debug', 'Group deleted');
     return true;
@@ -548,7 +551,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     };
 
     const result = await userAuthentication(email, password);
-    console.log('RES', result);
     if (result.success) {
       req.session.userId = result.user.userID;
       req.session.username = result.user.name;
@@ -779,7 +781,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         const currUser = await getUserAsync(req.session.userId);
         // Check if current user is in group
         const currUserGroup = await getUserGroupAsync(req.params.groupid, req.session.userId);
-        console.log('currUserGroup ' + currUserGroup);
         var render_args;
         if (currGroup && currUser && currUserGroup != null) {
           render_args = {
@@ -925,7 +926,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const authenticated = await userAuthenticatedAsync(req);
       if (!authenticated) return res.send('You are not logged in!!');
 
-      if (!groupId) return sendError('Group-Id not defined', res);
+      if (!groupId) return sendError('deletePad - Group-Id not defined', res);
       if (!padName) return sendError('Pad Name not defined', res);
 
       const [userGroup] = await pool.query('SELECT * from UserGroup where UserGroup.userId = ? and UserGroup.groupID= ?', [req.session.userId, groupId]).then(([rows]) => rows);
@@ -955,7 +956,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     if (isAdmin || authenticated) {
       try {
         const { groupId } = req.body;
-        if (!groupId) return sendError('Group-Id not defined', res);
+        if (!groupId) return sendError('deleteGroup - Group-Id not defined', res);
 
         if (!isAdmin) {
           const userGroup = await getAllSqlAsync('SELECT * FROM UserGroup WHERE userID = ? AND groupID = ?', [req.session.userId, groupId]);
@@ -967,17 +968,19 @@ exports.expressCreateServer = function (hook_name, args, cb) {
             return sendError('User is not Owner. Can not delete Group', res);
           }
         }
-        // Delete from Groups
-        await pool.query('DELETE FROM Groups WHERE groupID = ?', [groupId]);
+        //This will delete entried in store table
+        const deleted = await asyncDeleteGroup(groupId);
 
-        // Delete from UserGroup
-        await pool.query('DELETE FROM UserGroup WHERE groupID = ?', [groupId]);
+        if (deleted) {
+          // Delete from Groups
+          await pool.query('DELETE FROM Groups WHERE groupID = ?', [groupId]);
 
-        // Delete from GroupPads
-        await pool.query('DELETE FROM GroupPads WHERE groupID = ?', [groupId]);
+          // Delete from UserGroup
+          await pool.query('DELETE FROM UserGroup WHERE groupID = ?', [groupId]);
 
-        // Call asyncDeleteGroup
-        await asyncDeleteGroup(groupId);
+          // Delete from GroupPads
+          await pool.query('DELETE FROM GroupPads WHERE groupID = ?', [groupId]);
+        }
 
         res.send({
           success: true,
@@ -1002,7 +1005,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       }
 
       if (!groupId) {
-        return sendError('Group-Id not defined', res);
+        return sendError('directToPad - Group-Id not defined', res);
       }
 
       // Check if user belongs to group
@@ -1203,13 +1206,11 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
   args.app.post('/updateUserStatus', async (req, res) => {
     const data = {};
-    console.log('RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRr');
     const authenticated = await userAuthenticatedAsync(req);
     const isAdmin = req.session?.user?.is_admin || false;
     if (isAdmin || authenticated) {
       try {
         const { userId, newStatus } = req.body;
-        console.log('URERRRR' + newStatus);
         const baseurl = `${getAppBaseUrl(req)}`;
         if (!userId || typeof newStatus === 'undefined') {
           return sendError('Missing parameters', res);
@@ -1453,6 +1454,9 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       const addPadToGroupSql = 'INSERT INTO GroupPads VALUES(?, ?)';
       const query = await pool.query(addPadToGroupSql, [fields.groupId, fields.padName]);
+      // Create the groupad in store table
+      const group = await getEtherpadGroupFromNormalGroupAsync(fields.groupId);
+      await groupManager.createGroupPad(group, fields.padName);
       res.send({ success: true, error: null });
     } catch (err) {
       log('error', 'Unhandled error in /createPad: ' + err);
@@ -1577,10 +1581,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const updates = {};
 
       for (const key of keys) {
-        console.log('key ' + key + 'value ' + req.body[key]);
         const newValue = req.body[key] === '1' ? 1 : 0;
         const currentValue = parseInt(currentSettings[key], 10) || 0;
-        console.log('iCurrent value  ' + currentValue);
 
         if (newValue !== currentValue) {
           updates[key] = newValue;

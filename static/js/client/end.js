@@ -554,7 +554,7 @@ jQuery(document).ready(function () {
 
   $('.deleteGroup').click(function () {
     $('#wrapper').append('<div id="overlay"></div>');
-    $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"><span' + ' class="close"><i class="demo-icon icon-cancel-circled-outline">&#xe802;</i>' + '</span></div><div id="lightBoxMain"><div class="headline">' + '<h1 lang="en" class="red">Delete "' + $(this).data('name') + '"' + '</h1></div><div class="content"><button id= "deleteGroup" data-name="' + $(this).data('name') + '" data-groupid="' + $(this).data('groupid') + '" lang="en" class="margi' + 'nRight">Delete</button><button id="cancelDelete" lang="en">Cancel</button></div>' + '</div></div>');
+    $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"><span' + ' class="close"><i class="demo-icon icon-cancel-circled-outline">&#xe802;</i>' + '</span></div><div id="lightBoxMain"><div class="headline">' + '<h1 lang="en" class="red">Delete "' + $(this).data('name') + '"' + '</h1><p>All pads associated with this group will be permanently deleted and cannot be recovered.</p></div><div class="content"><button id= "deleteGroup" data-name="' + $(this).data('name') + '" data-groupid="' + $(this).data('groupid') + '" lang="en" class="marginRight">Delete</button><button id="cancelDelete" lang="en">Cancel</button></div>' + '</div></div>');
     $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
 
     $('.close').click(function () {

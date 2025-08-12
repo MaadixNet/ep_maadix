@@ -288,6 +288,9 @@ th.wiprec-20 {
   display: block;
   width: 250px;
 }
+button#cancelDelete {
+  float: right;
+}
 
 .margin20 {
   margin-bottom: 20px;
