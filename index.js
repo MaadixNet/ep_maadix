@@ -24,7 +24,7 @@ var db = require('ep_etherpad-lite/node/db/DB').db;
 var groupManager = require('ep_etherpad-lite/node/db/GroupManager');
 var api = require('ep_etherpad-lite/node/db/API');
 var Changeset = require('ep_etherpad-lite/static/js/Changeset');
-var mysql = require('mysql2');
+//var mysql = require('mysql2');
 var settings = require('ep_etherpad-lite/node/utils/Settings');
 var customError = require('ep_etherpad-lite/node/utils/customError');
 var authorManager = require('ep_etherpad-lite/node/db/AuthorManager');
@@ -33,6 +33,7 @@ var crypto = require('crypto');
 var pkg = require('./package.json');
 var fs = require('fs');
 const util = require('util');
+const { pool } = require(__dirname +'/db');
 
 var eMailAuth = require(__dirname + '/email.json');
 var dbAuth = settings.dbSettings;
@@ -79,7 +80,7 @@ var mySqlErrorHandler = function (err) {
   msg += err.message;
   log('error', msg);
 };
-
+/*
 const mysql2 = require('mysql2/promise');
 
 let pool;
@@ -94,7 +95,7 @@ initPoolConnection()
   .catch((err) => {
     console.error('Error connecting to MySQL:', err);
   });
-
+*/
 async function userAuthenticatedAsync(req) {
   log('debug', 'userAuthenticated');
   return !!(req.session?.username && req.session?.userId);
@@ -121,8 +122,8 @@ async function mailTransporterAsync() {
     },
   });
 }
-
-async function getPasswordAsyncVersion({ length = 12, extraChars = '', first = { number: true, lower: true, upper: true, other: false }, latter = { number: true, lower: true, upper: true, other: false } } = {}) {
+/*
+async function getToken({ length = 12, extraChars = '', first = { number: true, lower: true, upper: true, other: false }, latter = { number: true, lower: true, upper: true, other: false } } = {}) {
   if (length <= 0) return '';
 
   let password = '';
@@ -134,10 +135,71 @@ async function getPasswordAsyncVersion({ length = 12, extraChars = '', first = {
 
   return password;
 }
+*/
+// 
+async function ensureTokenSecret() {
+  const key = "plugin:ep_maadix:token_secret";
 
+  // Intentar leerlo de la DB
+  const [rows] = await pool.query("SELECT value FROM store WHERE `key` = ?", [key]);
+
+  if (rows.length > 0) {
+    return rows[0].value.replace(/"/g, "");
+  }
+
+  // Si no existe, generamos uno nuevo
+  const secret = crypto.randomBytes(32).toString("hex");
+
+  await pool.query("INSERT INTO store (`key`, value) VALUES (?, ?)", [
+    key,
+    JSON.stringify(secret),
+  ]);
+
+  log(`debug', 'token_secretcreated and saved in DB`);
+  return secret;
+}
+// Generate token with timestamp
+async function generateResetToken(userId) {
+  const timestamp = Date.now();
+  const randomPart = crypto.randomBytes(16).toString("hex");
+  const payload = `${userId}:${timestamp}:${randomPart}`;
+  const token_secret = await ensureTokenSecret();
+  // Sign the token to ensure validity 
+  const signature = crypto
+    .createHmac("sha256", token_secret)
+    .update(payload)
+    .digest("hex");
+
+  return `${payload}:${signature}`;
+}
+
+// Validate token (10 minutes = 600000 ms)
+function validateResetToken(token, maxAgeMs = 600000) {
+  try {
+    const parts = token.split(":");
+    if (parts.length !== 4) return false;
+
+    const [userId, timestamp, randomPart, signature] = parts;
+    const payload = `${userId}:${timestamp}:${randomPart}`;
+
+    const expectedSig = crypto
+      .createHmac("sha256", TOKEN_SECRET)
+      .update(payload)
+      .digest("hex");
+
+    if (expectedSig !== signature) return false; // Token manipulado
+
+    const age = Date.now() - parseInt(timestamp, 10);
+    if (age > maxAgeMs) return false; // Token expirado
+
+    return { valid: true, userId };
+  } catch {
+    return false;
+  }
+}
 async function checkIfUserExistsAsync(sql, params) {
   //const result =await queryAsync(sql, params);
-  const result = await pool.query(sql, params);
+  const [result] = await pool.query(sql, params);
   return result.length > 0;
 }
 
@@ -175,7 +237,7 @@ async function getOneValueSqlAsync(query, values) {
 }
 async function registerInvitedUserAsync(user) {
   const salt = await createSaltAsync(); // Make sure we receive a Promise
-  const encrypted = await encryptPasswordAsync(user.password, salt); // También debería ser async
+  const encrypted = await encryptPasswordAsync(user.password, salt); 
 
   const updateQuery = `
     UPDATE User 
@@ -196,8 +258,14 @@ async function registerInvitedUserAsync(user) {
   }
 }
 
+// Hash password with pbkdf2
 async function encryptPasswordAsync(password, salt) {
-  return crypto.createHmac('sha256', salt).update(password).digest('hex');
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(password, salt, 100000, 64, "sha512", (err, derivedKey) => {
+      if (err) return reject(err);
+      resolve(derivedKey.toString("hex"));
+    });
+  });
 }
 
 async function getAllSqlAsync(sql, params = []) {
@@ -602,13 +670,14 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const userEmail = req.body.userEmail;
       const baseUrl = getAppBaseUrl(req); // aquí sacás la url base directamente
 
-      const exists = await checkIfUserExistsAsync('SELECT * FROM User WHERE email = ?', [userEmail]);
-      if (exists) {
+      const [rows, fields]= await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
+ 
+      if (rows.length > 0) {
         return sendError('An account already exists with this Email address', res);
       }
 
       const salt = await createSaltAsync();
-      const consString = await getPasswordAsyncVersion();
+      const consString = await generateResetToken(fields.userID);
 
       //await queryAsync('INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, ?, 0)', [userEmail, userEmail, consString, salt]);
       await pool.query('INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, ?, 0)', [userEmail, userEmail, consString, salt]);
@@ -662,17 +731,27 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
   args.app.get('/reset/:token', async (req, res) => {
     var render_args = {};
-    var tok;
+    var token = req.params.token;
+
     const settings = await getPadsSettingsAsync();
     const authenticated = await userAuthenticatedAsync(req);
-
+    const username = authenticated ? req.session.username : '';
+    const userid = authenticated ? req.session.userId : '';
+    const {valid} = validateResetToken(token); 
     if (authenticated) {
       res.redirect(req.session.baseurl + '/dashboard');
+      return;
     } else {
       var render_args = {
         errors: [],
-        tok: req.params.token,
+        token: token,
+	valid_token: valid,
         settings: settings,
+	baseUrl: `${getAppBaseUrl(req)}`,
+	authenticated: authenticated,
+        isAdmin: req.session?.user?.is_admin || false,
+        username,
+        userid,
       };
       res.send(eejs.require('ep_maadix/templates/reset.ejs', render_args));
     }
@@ -687,14 +766,13 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     }
 
     try {
-      const userExists = await checkIfUserExistsAsync('SELECT * FROM User WHERE email = ?', [userEmail]);
-
-      if (!userExists) {
+      const [rows, fields]= await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
+      if (rows.length < 1) {
         return sendError('This account does not exist', res);
       }
 
-      const confirmationString = await getPasswordAsyncVersion();
-
+      const salt = await createSaltAsync();
+      const confirmationString = await generateResetToken(fields.userID);
       //await queryAsync('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
       await pool.query('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
 
@@ -754,7 +832,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
           //var consString = await  createSaltAsync();
           /* Fields in User table are:u<<serID, name, email, password, confirmed, FullName, confirmationString, salt, active*/
           addUserSql = 'Update User SET confirmationString = ?, password = ?, salt = ? WHERE email = ?';
-          const success = await pool.query(addUserSql, ['', encrypted, salt, userEmail]);
+          const [success] = await pool.query(addUserSql, ['', encrypted, salt, userEmail]);
           if (success) {
             var data = {};
             data.success = success;
@@ -819,6 +897,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       }
     } else {
       res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      
     }
   });
 
@@ -868,6 +947,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const authenticated = await userAuthenticatedAsync(req);
       const data = {};
 
+      const groupName = req.body.groupName;
       if (!authenticated) {
         return res.status(401).send('You are not logged in!!');
       }
@@ -877,7 +957,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         return;
       }
 
-      const groupName = req.body.groupName;
+      
 
       if (!groupName) {
         return sendError('Group Name not defined', res);
@@ -1002,6 +1082,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       if (!(await userAuthenticatedAsync(req))) {
         res.redirect(`${getAppBaseUrl(req)}` + '/login');
+	return;
       }
 
       if (!groupId) {
@@ -1360,7 +1441,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       if (!user) {
         // user does not exists yet and must be creates
         msg = eMailAuth.invitateunregisterednmsg;
-        const consString = await getPasswordAsyncVersion();
+        const consString = await getToken();
 
         url = `${baseUrl}/confirm/${consString}`;
         const [result] = await pool.query('INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, null, 0)', [userEmail, userEmail, consString]);
@@ -1401,7 +1482,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     try {
       const authenticated = await userAuthenticatedAsync(req);
       if (!authenticated) {
-        res.redirect('/login');
+        return res.redirect('/login');
       }
 
       const { userID, groupID } = req.body;
@@ -1432,7 +1513,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const fields = req.body;
       const authenticated = await userAuthenticatedAsync(req);
       if (!authenticated) {
-        res.redirect('/login');
+        return res.redirect('/login');
       }
       if (!fields.groupId) {
         return sendError('Group-Id not defined', res);
@@ -1507,7 +1588,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       };
       res.send(eejs.require('ep_maadix/templates/dashboard2.ejs', render_args));
     } else {
-      res.redirect('/login');
+      return res.redirect('/login');
     }
   });
 
@@ -1582,6 +1663,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       for (const key of keys) {
         const newValue = req.body[key] === '1' ? 1 : 0;
+	console.log(key + " " + newValue);
         const currentValue = parseInt(currentSettings[key], 10) || 0;
 
         if (newValue !== currentValue) {

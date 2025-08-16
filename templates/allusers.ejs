@@ -84,7 +84,7 @@
       $(document).ready(function () {
         $('.delete').click(function () {
           $('#wrapper').append('<div id="overlay"></div>');
-          $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"' + '><span class="close"><img src="./../static/plugins/ep_user_pad_frontend/static/images/close-cyan-12.png"' + '></span></div><div id="lightBoxMain">' + '<div class="headline">' + '<h1 lang="en" class="red">Remove  "' + $(this).data('username') + '" from Etherpad?' + '</h1></div><div class="content"><button lang="en" class="marginRight" id="deleteUserButton"' + 'data-userid="' + $(this).data('userid') + '">' + 'Delete</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');
+          $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"' + '><span class="close"><img src="./../static/plugins/ep_user_pad_frontend/static/images/close-cyan-12.png"' + '></span></div><div id="lightBoxMain">' + '<div class="headline">' + '<h1 lang="en" class="red">Remove  "' + $(this).data('username') + '" from Etherpad?' + '</h1><p>User will be removed from all groups and the account will be deleted</p></div><div class="content"><button lang="en" class="marginRight" id="deleteUserButton"' + 'data-userid="' + $(this).data('userid') + '">' + 'Delete</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');
           $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
 
           $('.close').click(function () {
