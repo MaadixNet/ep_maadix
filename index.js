@@ -35,7 +35,7 @@ var fs = require('fs');
 const util = require('util');
 const { pool } = require(__dirname +'/db');
 
-var eMailAuth = require(__dirname + '/email.json');
+//var eMailAuth = require(__dirname + '/email.json');
 var dbAuth = settings.dbSettings;
 var dbAuthParams = {
   host: dbAuth.host,
@@ -99,6 +99,18 @@ initPoolConnection()
 async function userAuthenticatedAsync(req) {
   log('debug', 'userAuthenticated');
   return !!(req.session?.username && req.session?.userId);
+}
+
+let eMailAuth = {};
+try {
+  eMailAuth = require(__dirname + '/email.json');
+  console.log('Email config loaded');
+} catch (err) {
+  if (err.code === 'MODULE_NOT_FOUND') {
+    console.log('Email config not found, continuing without it');
+  } else {
+    throw err; // re-throw other errors
+  }
 }
 async function mailTransporterAsync() {
   const nodemailer = require('nodemailer');
@@ -409,6 +421,11 @@ async function getUsersOfGroupAsync(groupId, userId) {
     return [];
   }
 }
+exports.eejsBlock_indexWrapper = function (hook_name, args, cb) {
+  args.content = eejs.require('ep_maadix/templates/index_redirect.ejs');
+  return cb();
+};
+
 // If a pad is deleted from admin and is a group pad, remove it from the GrouPads table
 exports.padRemove = async (hookName, context) => {
   const padID = context.pad.id;

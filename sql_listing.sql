@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `User` (
 	`password` varchar(255) COLLATE utf8_bin DEFAULT NULL,
 	`confirmed` tinyint(11) DEFAULT NULL,
 	`FullName` varchar(255) COLLATE utf8_bin DEFAULT NULL,
-	`confirmationString` varchar(50) COLLATE utf8_bin DEFAULT NULL,
+	`confirmationString` varchar(255) COLLATE utf8_bin DEFAULT NULL,
 	`salt` varchar(255) COLLATE utf8_bin DEFAULT NULL,
 	`active` int(1) DEFAULT NULL,
 	PRIMARY KEY (`userID`,`name`)
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `UserGroup` (
 
 CREATE TABLE IF NOT EXISTS `Settings` (
 	`key` varchar(255) COLLATE utf8_bin NOT NULL,
-	`value` int(11) NOT NULL,
+	`value` varchar(255) NOT NULL,
 	PRIMARY KEY (`key`)
 	);
 
