@@ -1,6 +1,14 @@
 const { pool } = require('./db');
 
 exports.expressPreSession = async function (hookName, context) {
+await setUpDb();
+}
+// Try to create tables upon plugin installation
+exports.pluginInstall = async function (hookName, context) {
+await setUpDb();
+}  
+
+async function setUpDb() {
   console.log("ep_maadix: *******Upgrading database structure********");
   // 
   try {

@@ -35,7 +35,18 @@ var fs = require('fs');
 const util = require('util');
 const { pool } = require(__dirname +'/db');
 
-//var eMailAuth = require(__dirname + '/email.json');
+const {mailTransporterAsync} = require(__dirname +'/mail')
+let eMailMessages;
+try {
+  eMailMessages = require(path.join(__dirname, 'email.json'));
+} catch (err) {
+  if (err.code === 'MODULE_NOT_FOUND' ) {
+    eMailMessages = require(path.join(__dirname, 'email-example.json'));
+  } else {
+    throw err; // rethrow other errors
+  }
+}
+
 var dbAuth = settings.dbSettings;
 var dbAuthParams = {
   host: dbAuth.host,
@@ -80,75 +91,12 @@ var mySqlErrorHandler = function (err) {
   msg += err.message;
   log('error', msg);
 };
-/*
-const mysql2 = require('mysql2/promise');
 
-let pool;
-async function initPoolConnection() {
-  pool = await mysql2.createPool(dbAuthParams);
-}
-// Start database Pool connection
-initPoolConnection()
-  .then(() => {
-    log('debug', 'MySQL Pool connected');
-  })
-  .catch((err) => {
-    console.error('Error connecting to MySQL:', err);
-  });
-*/
 async function userAuthenticatedAsync(req) {
   log('debug', 'userAuthenticated');
   return !!(req.session?.username && req.session?.userId);
 }
 
-let eMailAuth = {};
-try {
-  eMailAuth = require(__dirname + '/email.json');
-  console.log('Email config loaded');
-} catch (err) {
-  if (err.code === 'MODULE_NOT_FOUND') {
-    console.log('Email config not found, continuing without it');
-  } else {
-    throw err; // re-throw other errors
-  }
-}
-async function mailTransporterAsync() {
-  const nodemailer = require('nodemailer');
-
-  if (eMailAuth.smtp === 'false') {
-    return nodemailer.createTransport({
-      sendmail: true,
-      newline: 'unix',
-      path: '/usr/sbin/sendmail',
-    });
-  }
-
-  return nodemailer.createTransport({
-    host: eMailAuth.host,
-    port: eMailAuth.port,
-    secure: eMailAuth.ssl,
-    tls: eMailAuth.tls,
-    auth: {
-      user: eMailAuth.user,
-      pass: eMailAuth.password,
-    },
-  });
-}
-/*
-async function getToken({ length = 12, extraChars = '', first = { number: true, lower: true, upper: true, other: false }, latter = { number: true, lower: true, upper: true, other: false } } = {}) {
-  if (length <= 0) return '';
-
-  let password = '';
-  password += getRandomChar(first.number, first.lower, first.upper, first.other, extraChars);
-
-  for (let i = 1; i < length; i++) {
-    password += getRandomChar(latter.number, latter.lower, latter.upper, latter.other, extraChars);
-  }
-
-  return password;
-}
-*/
-// 
 async function ensureTokenSecret() {
   const key = "plugin:ep_maadix:token_secret";
 
@@ -685,7 +633,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       }
 
       const userEmail = req.body.userEmail;
-      const baseUrl = getAppBaseUrl(req); // aquí sacás la url base directamente
+      const regtype = req.body.regtype || "";
+      const baseUrl = getAppBaseUrl(req); 
 
       const [rows, fields]= await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
  
@@ -706,13 +655,16 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       }
 
       const confirmUrl = `${baseUrl}/confirm/${consString}`;
-      let msg = eMailAuth.registrationtext.replace(/<url>/, confirmUrl);
-
+      if (regtype) {
+	let msg = eMailMessages.invitationfromadminmsg.replace(/<url>/, confirmUrl);
+      } else {
+        let msg = eMailMessages.registrationtext.replace(/<url>/, confirmUrl);
+      }
       const message = {
         text: msg,
         from: eMailAuth.invitationfrom,
         to: `${userEmail} <${userEmail}>`,
-        subject: eMailAuth.registrationsubject,
+        subject: eMailMessages.registrationsubject,
       };
 
       const transporter = await mailTransporterAsync();
@@ -794,13 +746,13 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       await pool.query('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
 
       const resetUrl = `${getAppBaseUrl(req)}/reset/${confirmationString}`;
-      const msgText = eMailAuth.pswdresetmsg.replace(/<url>/, resetUrl);
+      const msgText = eMailMessages.pswdresetmsg.replace(/<url>/, resetUrl);
 
       const message = {
         text: msgText,
         from: eMailAuth.invitationfrom,
         to: `${userEmail} <${userEmail}>`,
-        subject: eMailAuth.pswdresetsubject,
+        subject: eMailMessages.pswdresetsubject,
       };
 
       const transporter = await mailTransporterAsync();
@@ -1457,7 +1409,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       let url;
       if (!user) {
         // user does not exists yet and must be creates
-        msg = eMailAuth.invitateunregisterednmsg;
+        msg = eMailMessages.invitateunregisterednmsg;
         const consString = await getToken();
 
         url = `${baseUrl}/confirm/${consString}`;
@@ -1469,7 +1421,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         }
       } else {
         userID = user.userID;
-        msg = eMailAuth.invitationmsg;
+        msg = eMailMessages.invitationmsg;
       }
 
       // Add user to group
@@ -1483,7 +1435,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         text: msg,
         from: eMailAuth.invitationfrom,
         to: `${userEmail} <${userEmail}>`,
-        subject: eMailAuth.invitationsubject,
+        subject: eMailMessages.invitationsubject,
       };
 
       const transporter = await mailTransporterAsync();
@@ -1639,6 +1591,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   /****************** admin views *******************/
   args.app.get('/settings', async (req, res) => {
     try {
+	console.log("GGGGGGGGGGGG " + eMailMessages.invitationmsg);
       const authenticated = await userAuthenticatedAsync(req);
       /*
       if (!authenticated) {
@@ -1692,7 +1645,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       for (const [key, value] of Object.entries(updates)) {
         results[key] = await setSettings(key, value);
 
-        // Manejo especial para public_pads
+        // public_pads
         if (key === 'public_pads') {
           const sessionReqValue = value === 0 ? 'true' : 'false';
           const settingsPath = path.resolve(process.cwd(), '../settings.json');

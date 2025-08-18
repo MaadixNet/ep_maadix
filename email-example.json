@@ -1,0 +1,23 @@
+{
+    "smtp": "false",
+    "user": "mustermann@example.com",
+    "password": "yourpassword",
+    "host": "smtp.example.com",
+    "port": "465",
+    "tls": "false",
+    "ssl": "true",
+    "invitationmsg": "The user \n\n<fromuser> has added you to the Etherpad private group <groupname>.\nYou can now begin to work collaboratively with the group members and read, edit any pad within this group.\n\n Why to wait? Click here to get started: <url>",
+    "invitationfrom": "mustermann@example.com",
+    "invitationsubject": "[Etherpad] Group Invitation",
+    "registrationtext": "Hello,\n\nYour registration at Etherpad was successfull! To complete your registration please click on the following link: <url> \nAfter completing registration, please log in with your new account.",
+    "registrationfrom": "mustermann@example.at",
+    "registrationsubject": "[Etherpad] Registration",
+    "resetpwmsg": "Your new Password for your etherpad Account: <password>",
+    "resetfrom": "mustermann@example.at",
+    "resetsubject": "Password reset for Etherpad-lite",
+    "invitateunregisterednmsg": "<fromuser> has added you to the Group: <groupname>. Please register at <url> to enter the group!",
+    "invitationfromadminmsg": "A new Etherpad account has been created for you. To complete your registration please click on the following link: <url> \nAfter completing registration, please log in with your new account.",
+    "pswdresetsubject": "[Etherpad] Password Reset",
+    "pswdresetmsg": "A new password was requested for your Etheprad account.\n\n To reset your password click on the link below.\n\n<url>"
+
+}

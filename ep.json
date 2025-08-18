@@ -4,6 +4,7 @@
       "name": "ep_maadix",
       "post": ["ep_etherpad-lite/static"],
       "hooks": {
+        "pluginInstall" : "ep_maadix/dbSetup",
 	"expressPreSession" : "ep_maadix/dbSetup",
         "expressConfigure": "ep_maadix/admin",
         "expressCreateServer": "ep_maadix/index",
