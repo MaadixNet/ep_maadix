@@ -1,33 +1,31 @@
 const { pool } = require('./db');
 
 exports.expressPreSession = async function (hookName, context) {
-await setUpDb();
-}
+  await setUpDb();
+};
 // Try to create tables upon plugin installation
 exports.pluginInstall = async function (hookName, context) {
-await setUpDb();
-}  
+  await setUpDb();
+};
 
 async function setUpDb() {
-  console.log("ep_maadix: *******Upgrading database structure********");
-  // 
+  console.log('ep_maadix: *******Upgrading database structure********');
+  //
   try {
     const [tables] = await pool.query("SHOW TABLES LIKE 'User'");
     if (tables.length > 0) {
-    const [userCols] = await pool.query("SHOW COLUMNS FROM `User` LIKE 'confirmationString'");
-    if (userCols.length > 0) {
-      const col = userCols[0];
-      const lengthMatch = col.Type.match(/varchar\((\d+)\)/i);
-      if (lengthMatch && parseInt(lengthMatch[1], 10) < 255) {
-        console.log("Actualizando User.confirmationString a VARCHAR(255)");
-        await pool.query(
-          "ALTER TABLE `User` MODIFY `confirmationString` VARCHAR(255) COLLATE utf8_bin"
-        );
+      const [userCols] = await pool.query("SHOW COLUMNS FROM `User` LIKE 'confirmationString'");
+      if (userCols.length > 0) {
+        const col = userCols[0];
+        const lengthMatch = col.Type.match(/varchar\((\d+)\)/i);
+        if (lengthMatch && parseInt(lengthMatch[1], 10) < 255) {
+          console.log('Actualizando User.confirmationString a VARCHAR(255)');
+          await pool.query('ALTER TABLE `User` MODIFY `confirmationString` VARCHAR(255) COLLATE utf8_bin');
+        }
       }
-    }
     } else {
-    // else, create table User
-await pool.query(`
+      // else, create table User
+      await pool.query(`
   CREATE TABLE IF NOT EXISTS \`User\` (
     \`userID\` int(11) NOT NULL AUTO_INCREMENT,
     \`name\` varchar(255) COLLATE utf8_bin NOT NULL DEFAULT '',
@@ -41,13 +39,13 @@ await pool.query(`
     PRIMARY KEY (\`userID\`, \`name\`)
   );
 `);
-console.log("[ep_maadix] - Table User created");
-	}
+      console.log('[ep_maadix] - Table User created');
+    }
   } catch (err) {
-    console.error("Error Updating table User . It may not exists. Skipping :", err);
+    console.error('Error Updating table User . It may not exists. Skipping :', err);
   }
-    try {
-await pool.query(`
+  try {
+    await pool.query(`
   CREATE TABLE IF NOT EXISTS \`Settings\` (
     \`key\` varchar(255) COLLATE utf8_bin NOT NULL,
     \`value\` int(11) NOT NULL,
@@ -84,18 +82,15 @@ await pool.query(`
     const defaults = [
       { key: 'register_enabled', value: 1 },
       { key: 'public_pads', value: 1 },
-      { key: 'recover_pw', value: 1 }
+      { key: 'recover_pw', value: 1 },
     ];
 
     for (const setting of defaults) {
-      await pool.query(
-        "INSERT IGNORE INTO `Settings` (`key`, `value`) VALUES (?, ?)",
-        [setting.key, setting.value]
-      );
+      await pool.query('INSERT IGNORE INTO `Settings` (`key`, `value`) VALUES (?, ?)', [setting.key, setting.value]);
     }
 
-    console.log("Database structure created");
+    console.log('Database structure created');
   } catch (err) {
-    console.error("Error setting database structure in ep_maadix:", err);
+    console.error('Error setting database structure in ep_maadix:', err);
   }
-};
+}

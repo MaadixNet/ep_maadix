@@ -33,18 +33,19 @@ var crypto = require('crypto');
 var pkg = require('./package.json');
 var fs = require('fs');
 const util = require('util');
-const { pool } = require(__dirname +'/db');
+const { pool } = require(__dirname + '/db');
 
-const {mailTransporterAsync} = require(__dirname +'/mail')
-let eMailMessages;
+const mailTransporterAsync = require(__dirname + '/mail');
+// messages fro emails notification
+let eMailMessages = {};
 try {
-  eMailMessages = require(path.join(__dirname, 'email.json'));
+  eMailMessages = require(__dirname + '/email.json');
+  eMailMessages.from = eMailMessages.from;
 } catch (err) {
-  if (err.code === 'MODULE_NOT_FOUND' ) {
-    eMailMessages = require(path.join(__dirname, 'email-example.json'));
-  } else {
-    throw err; // rethrow other errors
-  }
+  eMailMessages = require(__dirname + '/email-example.json');
+  const os = require('os');
+  const fqdn = os.hostname();
+  eMailMessages.from = `etherpad@${fqdn}`;
 }
 
 var dbAuth = settings.dbSettings;
@@ -98,61 +99,51 @@ async function userAuthenticatedAsync(req) {
 }
 
 async function ensureTokenSecret() {
-  const key = "plugin:ep_maadix:token_secret";
+  const key = 'plugin:ep_maadix:token_secret';
 
   // Intentar leerlo de la DB
-  const [rows] = await pool.query("SELECT value FROM store WHERE `key` = ?", [key]);
+  const [rows] = await pool.query('SELECT value FROM store WHERE `key` = ?', [key]);
 
   if (rows.length > 0) {
-    return rows[0].value.replace(/"/g, "");
+    return rows[0].value.replace(/"/g, '');
   }
 
   // Si no existe, generamos uno nuevo
-  const secret = crypto.randomBytes(32).toString("hex");
+  const secret = crypto.randomBytes(32).toString('hex');
 
-  await pool.query("INSERT INTO store (`key`, value) VALUES (?, ?)", [
-    key,
-    JSON.stringify(secret),
-  ]);
+  await pool.query('INSERT INTO store (`key`, value) VALUES (?, ?)', [key, JSON.stringify(secret)]);
 
   log(`debug', 'token_secretcreated and saved in DB`);
   return secret;
 }
 // Generate token with timestamp
-async function generateResetToken(userId) {
+async function generateResetToken() {
+  //userId is 0 for new user creation
   const timestamp = Date.now();
-  const randomPart = crypto.randomBytes(16).toString("hex");
-  const payload = `${userId}:${timestamp}:${randomPart}`;
+  const randomPart = crypto.randomBytes(16).toString('base64url');
+  const payload = `${timestamp}:${randomPart}`;
   const token_secret = await ensureTokenSecret();
-  // Sign the token to ensure validity 
-  const signature = crypto
-    .createHmac("sha256", token_secret)
-    .update(payload)
-    .digest("hex");
+  // Sign the token to ensure validity
+  const signature = crypto.createHmac('sha256', token_secret).update(payload).digest('base64url');
 
   return `${payload}:${signature}`;
 }
 
 // Validate token (10 minutes = 600000 ms)
-function validateResetToken(token, maxAgeMs = 600000) {
+async function validateResetToken(token, maxAgeMs = 600000) {
   try {
-    const parts = token.split(":");
-    if (parts.length !== 4) return false;
-
-    const [userId, timestamp, randomPart, signature] = parts;
-    const payload = `${userId}:${timestamp}:${randomPart}`;
-
-    const expectedSig = crypto
-      .createHmac("sha256", TOKEN_SECRET)
-      .update(payload)
-      .digest("hex");
+    // decode token
+    const parts = token.split(':');
+    if (parts.length !== 3) return false;
+    const [timestamp, randomPart, signature] = parts;
+    const payload = `${timestamp}:${randomPart}`;
+    const token_secret = await ensureTokenSecret();
+    const expectedSig = crypto.createHmac('sha256', token_secret).update(payload).digest('base64url');
 
     if (expectedSig !== signature) return false; // Token manipulado
-
     const age = Date.now() - parseInt(timestamp, 10);
     if (age > maxAgeMs) return false; // Token expirado
-
-    return { valid: true, userId };
+    return true;
   } catch {
     return false;
   }
@@ -166,7 +157,7 @@ async function checkIfUserExistsAsync(sql, params) {
 const { randomBytes } = require('crypto');
 
 async function createSaltAsync(length = 16) {
-  return (await randomBytes(length)).toString('hex');
+  return (await randomBytes(length)).toString('base64url');
 }
 
 async function getLastInsertIdAsync() {
@@ -197,11 +188,11 @@ async function getOneValueSqlAsync(query, values) {
 }
 async function registerInvitedUserAsync(user) {
   const salt = await createSaltAsync(); // Make sure we receive a Promise
-  const encrypted = await encryptPasswordAsync(user.password, salt); 
+  const encrypted = await encryptPasswordAsync(user.password, salt);
 
   const updateQuery = `
     UPDATE User 
-    SET name = ?, password = ?, confirmed = 1, FullName = ?, salt = ?, active = 1 
+    SET name = ?, password = ?, confirmed = 1, FullName = ?, confirmationString = NULL,  salt = ?, active = 1 
     WHERE email = ?
   `;
 
@@ -221,9 +212,9 @@ async function registerInvitedUserAsync(user) {
 // Hash password with pbkdf2
 async function encryptPasswordAsync(password, salt) {
   return new Promise((resolve, reject) => {
-    crypto.pbkdf2(password, salt, 100000, 64, "sha512", (err, derivedKey) => {
+    crypto.pbkdf2(password, salt, 100000, 64, 'sha512', (err, derivedKey) => {
       if (err) return reject(err);
-      resolve(derivedKey.toString("hex"));
+      resolve(derivedKey.toString('hex'));
     });
   });
 }
@@ -624,7 +615,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       res.status(500).send('Internal Server Error');
     }
   });
-
+  /*
   args.app.post('/register', [check('userEmail').isEmail().trim().escape()], async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -653,16 +644,15 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       if (!mappedUser) {
         return sendError('Error adding user to Etherpad', res);
       }
-
       const confirmUrl = `${baseUrl}/confirm/${consString}`;
       if (regtype) {
-	let msg = eMailMessages.invitationfromadminmsg.replace(/<url>/, confirmUrl);
+	var msg = eMailMessages.invitationfromadminmsg.replace(/<url>/, confirmUrl);
       } else {
-        let msg = eMailMessages.registrationtext.replace(/<url>/, confirmUrl);
+        var msg = eMailMessages.registrationtext.replace(/<url>/, confirmUrl);
       }
       const message = {
         text: msg,
-        from: eMailAuth.invitationfrom,
+        from: eMailMessages.from,
         to: `${userEmail} <${userEmail}>`,
         subject: eMailMessages.registrationsubject,
       };
@@ -675,6 +665,66 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     } catch (error) {
       console.error('[register] Error:', error);
       sendError('Error processing registration', res);
+    }
+  });
+*/
+
+  args.app.post('/register', [check('userEmail').isEmail().trim().escape()], async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return sendError('Invalid input data', res);
+      }
+
+      const userEmail = req.body.userEmail;
+      const regtype = req.body.regtype || '';
+      const baseUrl = getAppBaseUrl(req);
+
+      const [rows, fields] = await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
+      if (rows.length > 0) {
+        return sendError('An account already exists with this Email address', res);
+      }
+      const salt = await createSaltAsync();
+      const consString = crypto.randomBytes(16).toString('base64url');
+
+      try {
+        // Crear usuario en DB
+        await pool.query('INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, ?, 0)', [userEmail, userEmail, consString, salt]);
+        const insertedUserId = await getLastInsertIdAsync();
+        const mappedUser = await addUserToEtherpadAsync(insertedUserId);
+
+        if (!mappedUser) {
+          return sendError('Error adding user to Etherpad', res);
+        }
+      } catch (err) {
+        console.error('[register] Error creating user:', err);
+        return sendError('Error creating user', res);
+      }
+
+      // Preparar correo
+      const confirmUrl = `${baseUrl}/confirm/${consString}`;
+      const msg = regtype ? eMailMessages.invitationfromadminmsg.replace(/<url>/, confirmUrl) : eMailMessages.registrationtext.replace(/<url>/, confirmUrl);
+      console.log('Sent message  ' + msg + ' from ' + eMailMessages.from);
+      const message = {
+        text: msg,
+        from: eMailMessages.from,
+        to: `${userEmail} <${userEmail}>`,
+        subject: eMailMessages.registrationsubject,
+      };
+
+      try {
+        // Enviar correo
+        const transporter = await mailTransporterAsync();
+        await transporter.sendMail(message);
+      } catch (err) {
+        console.error('[register] Error sending email:', err);
+        return sendError('Error sending confirmation email', res);
+      }
+
+      res.send({ success: true, error: false });
+    } catch (error) {
+      console.error('[register] Unexpected error:', error);
+      sendError('Unexpected error processing registration', res);
     }
   });
   args.app.get('/recover', async (req, res) => {
@@ -706,7 +756,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     const authenticated = await userAuthenticatedAsync(req);
     const username = authenticated ? req.session.username : '';
     const userid = authenticated ? req.session.userId : '';
-    const {valid} = validateResetToken(token); 
+
+    const valid = await validateResetToken(token);
     if (authenticated) {
       res.redirect(req.session.baseurl + '/dashboard');
       return;
@@ -714,10 +765,10 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       var render_args = {
         errors: [],
         token: token,
-	valid_token: valid,
+        valid_token: valid,
         settings: settings,
-	baseUrl: `${getAppBaseUrl(req)}`,
-	authenticated: authenticated,
+        baseUrl: `${getAppBaseUrl(req)}`,
+        authenticated: authenticated,
         isAdmin: req.session?.user?.is_admin || false,
         username,
         userid,
@@ -735,13 +786,13 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     }
 
     try {
-      const [rows, fields]= await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
+      const [rows, fields] = await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
       if (rows.length < 1) {
         return sendError('This account does not exist', res);
       }
 
       const salt = await createSaltAsync();
-      const confirmationString = await generateResetToken(fields.userID);
+      const confirmationString = await generateResetToken();
       //await queryAsync('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
       await pool.query('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
 
@@ -750,7 +801,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       const message = {
         text: msgText,
-        from: eMailAuth.invitationfrom,
+        from: eMailMessages.from,
         to: `${userEmail} <${userEmail}>`,
         subject: eMailMessages.pswdresetsubject,
       };
@@ -789,6 +840,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const password = req.body.password;
       const tok = req.body.tok;
       try {
+        //make sure that post operation need th know the confirmation sting
+        // TOD: should tokeen validation be performed gere?
         var sql = 'SELECT * from User where User.email = ? AND confirmationString = ?';
         const exists = await checkIfUserExistsAsync(sql, [userEmail, tok]);
         if (!exists) {
@@ -866,7 +919,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       }
     } else {
       res.redirect(`${getAppBaseUrl(req)}` + '/login');
-      
     }
   });
 
@@ -925,8 +977,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         sendError('Invalid Group Name. Need at least 2  alphanumeric chars.', res);
         return;
       }
-
-      
 
       if (!groupName) {
         return sendError('Group Name not defined', res);
@@ -1051,7 +1101,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       if (!(await userAuthenticatedAsync(req))) {
         res.redirect(`${getAppBaseUrl(req)}` + '/login');
-	return;
+        return;
       }
 
       if (!groupId) {
@@ -1144,7 +1194,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       if (authenticated) {
         return res.redirect(`${getAppBaseUrl(req)}` + '/dashboard');
       }
-
       const render_args = {
         errors: [],
         tok: req.params.token,
@@ -1188,7 +1237,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       };
 
       // make sure username is available
-      const existing = await getOneValueSqlAsync('SELECT * FROM User WHERE User.name = ? AND User.email NOT LIKE ?', [user.username, user.email]);
+      const existing = await getOneValueSqlAsync('SELECT * FROM User WHERE User.name = ?', [user.username]);
       if (existing) {
         sendError('Username not available', res);
         return;
@@ -1410,7 +1459,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       if (!user) {
         // user does not exists yet and must be creates
         msg = eMailMessages.invitateunregisterednmsg;
-        const consString = await getToken();
+        const consString = crypto.randomBytes(16).toString('base64url');
 
         url = `${baseUrl}/confirm/${consString}`;
         const [result] = await pool.query('INSERT INTO User VALUES(null, ?, ?, null, 0, null, ?, null, 0)', [userEmail, userEmail, consString]);
@@ -1433,7 +1482,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       msg = msg.replace(/<url>/g, url);
       const message = {
         text: msg,
-        from: eMailAuth.invitationfrom,
+        from: eMailMessages.from,
         to: `${userEmail} <${userEmail}>`,
         subject: eMailMessages.invitationsubject,
       };
@@ -1591,7 +1640,6 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   /****************** admin views *******************/
   args.app.get('/settings', async (req, res) => {
     try {
-	console.log("GGGGGGGGGGGG " + eMailMessages.invitationmsg);
       const authenticated = await userAuthenticatedAsync(req);
       /*
       if (!authenticated) {
@@ -1633,7 +1681,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       for (const key of keys) {
         const newValue = req.body[key] === '1' ? 1 : 0;
-	console.log(key + " " + newValue);
+        console.log(key + ' ' + newValue);
         const currentValue = parseInt(currentSettings[key], 10) || 0;
 
         if (newValue !== currentValue) {

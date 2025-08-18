@@ -478,11 +478,9 @@ jQuery(document).ready(function () {
       console.log(data.location);
       console.log(document.location);
       post(data, url + 'confirminvitation', function (data) {
-        console.log('DATATATATATATAT ' + data);
         if (data.success) {
           window.location = url + 'login?act=ok';
         } else {
-          console.log('HHHHHHHHHHHHHHHHHH' + data.error);
           $('#wrapper').find('.errorRight').remove();
           $('#formEtherpadConfirm input').each(function () {
             if ($(this).is('#email') && (data.error == 'No valid E-Mail' || data.error == 'You need a valid invitation')) {
