@@ -3,7 +3,9 @@
   <head>
     <title>Groups</title>
     <base href="<%= baseUrl %>/" />
+	<link href="static/plugins/ep_maadix/static/css/dataTable.css" rel="stylesheet" />
     <%- include('blocks/head', { settings: settings }) %>
+	<script src="static/plugins/ep_maadix/static/js/client/dataTable.js" type="text/javascript"></script>
   </head>
   <body>
     <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid }) %>
@@ -34,7 +36,7 @@
         <!--title-block-->
         <div class="clear"></div>
         <%if (pads.length > 0) {%>
-        <table id="padstable" class="display" cellspacing="0" width="100%">
+        <table id="padstable" class="display table table-striped" cellspacing="0" width="100%">
           <thead>
             <tr>
               <th>Pad Title</th>
@@ -52,7 +54,7 @@
               <% if (role < 3) {%>
               <td title="Delete Pad" class="last">
                 <a data-padname="<%=pads[i-1].name%>" data-groupid="<%= groupid %>" class="delete deletePad">
-                  <i class="demo-icon icon-trash">&#xe801;</i>
+                  <i class="demo-icon icon-trash-1">&#xe83d;</i>
                 </a>
               </td>
               <% } %>
@@ -69,8 +71,6 @@
       <div style="clear: both"></div>
       <% } %>
     </article>
-    <script src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js" type="text/javascript"></script>
-
     <script>
       $(document).ready(function () {
         $('#padstable').DataTable({

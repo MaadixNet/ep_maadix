@@ -409,7 +409,6 @@ jQuery(document).ready(function () {
     e.preventDefault();
     const username = $('#username').val();
     const password = $('#password').val();
-    console.log('US ' + username + 'PS' + password);
     fetch('/admin-auth/', {
       method: 'POST',
       headers: {

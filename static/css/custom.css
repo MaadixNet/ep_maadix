@@ -186,12 +186,10 @@ ul.submenu {
 
 table {
   width: 100%;
-
   border-collapse: collapse;
-
   margin: 15px 0;
 }
-
+table.dataTable{ margin: 12px auto;}
 /* Zebra striping */
 
 tr:nth-of-type(odd) {
@@ -447,12 +445,6 @@ ul.submenu li a.active {
 ul.submenu li a[href]:hover {
   border: 1px solid #687996;
   color: #2d4162;
-}
-
-/*************Frontend admin menu************/
-.inner-menu.frontend {
-  border-radius: 0;
-  background-color: #2d4162;
 }
 
 /********************COLS************/

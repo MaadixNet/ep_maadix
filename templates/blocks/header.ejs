@@ -1,50 +1,55 @@
     <header>
-      <div class="header-block header-block-buttons">
-        <% if (authenticated) { %>
-        <div class="header-block header-block-nav first">
-          <a class="btn btn-sm header-btn" href="dashboard"><i class="demo-icon icon-home home-menu">&#xe81d;</i> My Groups</a> |
-          <% if (settings.public_pads) { %>
-          <a class="btn btn-sm header-btn" href="">Public Pad</a> |
-          <% } %>
-          <a class="btn btn-sm header-btn" href="help">Help</a>
-        </div>
-        <div class="header-block header-block-nav second">
-          <ul id="profile">
-            <li>
-              <span class="name"
-                ><i class="demo-icon icon-user">&#xe800;</i>
-                <%= username %>
-                <i class="demo-icon icon-down-dir-1">&#xe818;</i></span
-              >
-              <ul>
-          <% if (isAdmin) { %>
-          <li><a class="btn btn-sm header-btn" href="settings">Settings</a></li>
-          <% } %>
+<div class="header-block header-block-buttons">
+  <% if (authenticated) { %>
+    <div class="header-block header-block-nav first">
+      <a class="btn btn-sm header-btn" href="dashboard">
+        <i class="demo-icon icon-home home-menu">&#xe800;</i> My Groups
+      </a>
+      <% if (settings.public_pads) { %>
+        | <a class="btn btn-sm header-btn" href="">Public Pad</a>
+      <% } %>
+      | <a class="btn btn-sm header-btn" href="help">Help</a>
+    </div>
 
-                <li><a class="dropdown-item" href="user/<%= userid %>">My Profile</a></li>
-                <li><a class="dropdown-item" href="./logout">Logout</a></li>
-              </ul>
-            </li>
+    <div class="header-block header-block-nav second">
+      <ul id="profile">
+        <li>
+          <span class="name">
+            <i class="demo-icon icon-user">&#xe802;</i>
+            <%= username %>
+            <i class="demo-icon icon-down-dir-1">&#xe815;</i>
+          </span>
+          <ul>
+            <li><a class="dropdown-item" href="user/<%= userid %>">My Profile</a></li>
+            <li><a class="dropdown-item" href="./logout">Logout</a></li>
           </ul>
-        </div>
-        <% } else { %>
-        <div class="header-block header-block-nav first"></div>
-        <div class="header-block header-block-nav second">
-          <ul id="profile">
-          <li><a class="btn btn-sm header-btn" href="settings">Settings</a></li> |
-            <li>
-              <span class="name"
-                ><a href="login"><i class="demo-icon icon-user">&#xe800;</i> Login</a></span
-              >
-            </li>
+        </li>
+      </ul>
 
-            <%if (settings.register_enabled ==1) { %>
-            <li><a class="button" href="register">Register</a></li>
-            <% } %>
-          </ul>
-        </div>
-
+      <% if (isAdmin) { %>
+        <a class="btn btn-sm header-btn admin-settings" href="settings" title="Admin Settings">
+          <i class="demo-icon icon-cog">&#xe807;</i>
+        </a>
+      <% } %>
+    </div>
+  <% } else { %>
+    <div class="header-block header-block-nav first"></div>
+    <div class="header-block header-block-nav second">
+      <ul id="profile">
+        <li>
+          <a href="login"><i class="demo-icon icon-user">&#xe802;</i> Login</a>
+        </li>
+        <% if (settings.register_enabled == 1) { %>
+          | <li><a class="button" href="register">Register</a></li>
         <% } %>
-      </div>
+      <% if (isAdmin) { %>
+        <a class="btn btn-sm header-btn admin-settings" href="settings" title="Admin Settings">
+          <i class="demo-icon icon-cog">&#xe807;</i>
+        </a>
+      <% } %>
+      </ul>
+    </div>
+  <% } %>
+</div>
     </header>
 

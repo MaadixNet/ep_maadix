@@ -85,7 +85,9 @@
                                                 </td>
                                                 <%if (role < 3) {%>
 						<td title="Delete User" class="last">
-                                                    <a data-userid="<%=users[i-1].userID%>"  data-username="<%=users[i-1].name%>" data-groupid="<%= groupid %>" id="remove" class="delete"><i class="demo-icon icon-trash">&#xe801;</i></a></td>
+                                                    <a data-userid="<%=users[i-1].userID%>"  data-username="<%=users[i-1].name%>" data-groupid="<%= groupid %>" id="remove" class="delete">
+							<i class="demo-icon icon-trash-1">&#xe83d;</i>
+						    </a></td>
                                                 <% } %>
 					</tr>
 				<% } %>
