@@ -3,8 +3,8 @@
   <head>
     <title>Groups</title>
     <base href="<%= baseUrl %>/" />
-   <%- include('blocks/head', { settings: settings }) %>
-   <link href="static/plugins/ep_maadix/static/css/admin.css" rel="stylesheet" />
+    <%- include('blocks/head', { settings: settings }) %>
+    <link href="static/plugins/ep_maadix/static/css/admin.css" rel="stylesheet" />
   </head>
   <body>
     <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid  }) %>
@@ -39,7 +39,7 @@
                   <% for(var i = 1; i <= groups.length; i++){%>
                   <tr class="visible" id="Gruppe<%= groups[i-1].groupID%>" data-role="<%= groups[i-1].Role%>">
                     <td class="first"><a href="group/<%= groups[i-1].groupID%>"><%= groups[i-1].name%></a></td>
-                    <td class="first"><a href="groupusers/<%= groups[i-1].groupID%>">View Users</a></td>
+                    <td class="first"><a href="allusers/<%= groups[i-1].groupID%>">View Users</a></td>
                     <td title="Delete Group" class="last">
                       <a data-groupid="<%=groups[i-1].groupID%>" data-name="<%=groups[i-1].name%>" class="deleteGroup"><i class="demo-icon icon-trash-1">&#xe83d;</i></a>
                     </td>

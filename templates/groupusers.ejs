@@ -1,166 +1,191 @@
 <!doctype html>
 <html>
-	<head>
-		<title>Users</title>
-		<base href="<%= baseUrl %>/">
-                <%- include('blocks/head', { settings: settings }) %>
-        </head>         
-        <body>
-                <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid }) %>
 
-               <article class="content items-list-page">
-                 <% if (groupid) { %>
-                    <div id="wrapper" class="title-search-block">
-                        <div class="title-block userlist">
-                            <div class="row">
-				<div class="col-md-9">
-                                  <%if (role < 3) {%>
-                                  <div class="inputBlock">
-                                    <h4 lang="en" class="margintrop0">Invite user to this group</h4>
-                                    <form id="InviteUserForm" class="margin20">
-                                      <input  type="mail"  placeholder="User email" id="email" autocomplete="off" required>
-                                        <div style="clear: both"></div>
-                                        <div class="margin20">
-                                        <p>Assign a role to new user for this Group</p>
-                                        <input type="radio" name="userRole" value="3" checked="checked"> Group Author - Can create and edit Pads<br>
-                                        <input type="radio" name="userRole" value="2"> Group Manager - Can create/edit/delete Pads and invite/remove Users<br>
-                                        <%if (role == 1 ) {%>
-                                        
-                                        <input type="radio" name="userRole" value="1"> Group Admin - Can create/edit/delete Pads, invite/remove Users and delete this Group<br>
-                                        <% } %>
-                                        </div>
-                                        <button data-groupid="<%= groupid %>" type="submit" lang="en" id="InviteUserToGroupForm">Add User</button>
-                                    </form>
+<head>
+  <title>Users</title>
+  <base href="<%= baseUrl %>/">
+  <%- include('blocks/head', { settings: settings }) %>
+</head>
 
-                                  </div>
-                                  <% } %>
+<body>
+  <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid }) %>
 
-				</div>
-                                <div class="col-md-3 margin20">
-                                    <ul class="submenu">
-                                        <li><a href="../group/<%= groupid %>">Pads List</a></li>
-                                    </ul>
-                                </div>
+  <article class="content items-list-page">
+    <% if (groupid) { %>
+    <div id="wrapper" class="title-search-block">
+      <div class="title-block userlist">
+        <div class="row">
+          <div class="col-md-9">
+            <%if (role < 3) {%>
+            <div class="inputBlock">
+              <h4 lang="en" class="margintrop0">Invite user to this group</h4>
+              <form id="InviteUserForm" class="margin20">
+                <input type="mail" placeholder="User email" id="email" autocomplete="off" required>
+                <div style="clear: both"></div>
+                <div class="margin20">
+                  <p>Assign a role to new user for this Group</p>
+                  <input type="radio" name="userRole" value="3" checked="checked"> Group Author - Can create and edit Pads<br>
+                  <input type="radio" name="userRole" value="2"> Group Manager - Can create/edit/delete Pads and invite/remove Users<br>
+                  <input type="hidden" id="baseurl" value="<%= baseUrl %>/" data-baseurl="<%= baseUrl %>/" />
+                  <%if (role == 1 ) {%>
 
-			    </div>	
-			</div>
-			<%if (users.length > 0) {%> 
-				<table class="card items">
-				<thead>
-					<tr>
-						<th>Name</th>
-                                                <th>Email</th>
-                                                <th class="wiprec-20">Role</th>
-                                                <th>Active</th>
-                                                <%if (role < 3) {%>
-						<th>Remove</th>
-                                                <% } %>
-					<tr>
-				</thead>
-				<% for(var i = 1; i <= users.length; i++){%>
-					<tr>
-						<td class="first"><%= users[i-1].name%></td>
-						<td class="editDate"><%=users[i-1].email%></td>
-                                                <td class="userGroupRole" data-usergrouprole="<%=users[i-1].Role%>">
-                                                  
-                                                  <%if ((role < 3 && users[i-1].Role > 1) || ( role ==1 ) ) {%>
-                                                  <form type="post">
-                                                  <select id="changeRole" data-groupid="<%= groupid %>" data-userid="<%=users[i-1].userID%>">
-                                                      <% for(var c = role; c <= 3; c++){%>                      
-                                                        <% var currrorle= (c == users[i-1].Role) ? "selected":""%> 
-                                                        <option <%=currrorle %> class="newrole" value="<%=c%>" data-groupid=" <%= groupid %>" data-userid="<%=users[i-1].userID%>"><%=c%></option>
-                                                      <% } %>
-                                                    </select>
-                                                  </form>
-                                                    <% } else { %>
-                                                      <span class="textrole"><%=users[i-1].Role%></span>
-                                                    <% } %>
-                                                </td>
-                                                <td class="editDate">
-						<% if (users[i - 1].active == 1) { %>
-						  <button class="toggle-user-status-btn active" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Deactivate account">Active</button>
-						<% } else { %>
-						  <button class="toggle-user-status-btn inactive" data-userid="<%= users[i - 1].userID %>" data-status="0" title="Activate account">Inactive</button>
-						 <% } %>
-                                                </td>
-                                                <%if (role < 3) {%>
-						<td title="Delete User" class="last">
-                                                    <a data-userid="<%=users[i-1].userID%>"  data-username="<%=users[i-1].name%>" data-groupid="<%= groupid %>" id="remove" class="delete">
-							<i class="demo-icon icon-trash-1">&#xe83d;</i>
-						    </a></td>
-                                                <% } %>
-					</tr>
-				<% } %>
-				</table>
+                  <input type="radio" name="userRole" value="1"> Group Admin - Can create/edit/delete Pads, invite/remove Users and delete this Group<br>
+                  <% } %>
+                </div>
+                <button data-groupid="<%= groupid %>" type="submit" lang="en" id="InviteUserToGroupForm">Add User</button>
+              </form>
 
-			</div>
-			<%} else {%>
-				<h4 class="red" lang="en">There are no users in this group.</h4>	
-			<%}%>	
+            </div>
+            <% } %>
+
+          </div>
+          <div class="col-md-3 margin20">
+            <ul class="submenu">
+              <li><a href="../group/<%= groupid %>">Pads List</a></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+      <%if (users.length > 0) {%>
+      <table class="card items">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th class="wiprec-20">Role</th>
+            <%if (role < 2) {%>
+            <th>Active</th>
+            <th>New Password</th>
+            <% } %>
+            <%if (role < 3) {%>
+            <th>Remove</th>
+            <% } %>
+          <tr>
+        </thead>
+        <% for(var i = 1; i <= users.length; i++){%>
+        <tr>
+          <td class="first"><%= users[i-1].name%></td>
+          <td class="editDate"><%=users[i-1].email%></td>
+          <td class="userGroupRole" data-usergrouprole="<%=users[i-1].Role%>">
+
+            <%if ((role < 3 && users[i-1].Role > 1) || ( role ==1 ) ) {%>
+            <form type="post">
+
+              <select id="changeRole" data-groupid="<%= groupid %>" data-userid="<%=users[i-1].userID%>">
+                <% for(var c = role; c <= 3; c++){%>
+                <% var currrorle= (c == users[i-1].Role) ? "selected":""%>
+
+
+                <option <%=currrorle %> class="newrole" value="<%=c%>" data-groupid=" <%= groupid %>" data-userid="<%=users[i-1].userID%>"><%=c%></option>
+                <% } %>
+              </select>
+            </form>
+            <% } else { %>
+            <span class="textrole"><%=users[i-1].Role%></span>
+            <% } %>
+          </td>
+          <%if (role < 2) {%>
+          <td class="editDate">
+            <% if (users[i - 1].active == 1) { %>
+            <a class="toggle-user-status-btn active" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Deactivate account">
+              <i class="demo-icon icon-toggle-on">&#xf205;</i>
+            </a>
+            <% } else { %>
+            <a class="toggle-user-status-btn inactive" data-userid="<%= users[i - 1].userID %>" data-status="0" title="Activate account">
+              <i class="demo-icon icon-toggle-off">&#xf204;</i>
+              </>
+              <% } %>
+          </td>
+          <td class="newPass">
+            <% if (users[i - 1].active == 1) { %>
+            <a class="get-recover-pass-link " data-userid="<%= users[i - 1].userID %>" data-status="1" title="Get recover  password link">
+              <i class="demo-icon icon-link">&#xf07b;</i>
+            </a>
+            <% } %>
+          </td>
+
+          <% } %>
+          <%if (role < 3) {%>
+          <td title="Delete User" class="last">
+            <a data-userid="<%=users[i-1].userID%>" data-username="<%=users[i-1].name%>" data-groupid="<%= groupid %>" id="remove" class="delete">
+              <i class="demo-icon icon-trash-1">&#xe83d;</i>
+            </a>
+          </td>
+          <% } %>
+        </tr>
+        <% } %>
+      </table>
+
+    </div>
+    <%} else {%>
+    <h4 class="red" lang="en">There are no users in this group.</h4>
+    <%}%>	
 		</div>
 	</div>
 	<div style="clear: both"></div>
-        <input id="baseurl" type="hidden" value="<%=baseUrl%>"> 
-        <% } else { %>
-          <h2 class="title center">This group does not exists!</h2>
-        <% } %>
-	</article>
-	 <script>
-    		$(document).ready(function(){  			
-                  
-    			$(".delete").click(function(){
-    				$("#wrapper").append('<div id="overlay"></div>');
-    				$("#wrapper").append('<div id="lightBox"><div id="lightBoxHeader"'+
-    						'><span class="close"><img src="./../static/plugins/ep_user_pad_frontend/static/images/close-cyan-12.png"'+
-    						'></span></div><div id="lightBoxMain">'+
-    						'<div class="headline">'+
-    						'<h1 lang="en" class="red">Remove  "'+ $(this).data('username') + '" from this group?'+
-    						'</h1></div><div class="content"><button lang="en" class="marginRight" id="deleteUserButton"'+
-    		   				'data-userid="'+$(this).data('userid')+'" data-groupid="'+$(this).data('groupid')+
-    		   				'">'+
-    						'Delete</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');
-    				$("#lightBox").css("margin-top",-$("#lightBox").height()/2);
-    			
-    				$(".close").click(function(){
-    					$("#overlay").remove();
-    					$("#lightBox").remove();
-    				});
-    		   		$("#cancelDelete").click(function(){
-    		   			console.log("clicked");
-    		   			$("#overlay").remove();
-    		   			$("#lightBox").remove();
-    		   		});
-    		   		
-    		   	 $("#deleteUserButton").click(function(){
-    		  	    	var data = {};
-    		  				var loc = document.location;
-	    		  	    	        data.groupID = $("#deleteUserButton").data('groupid');
-	    		  			data.userID = $("#deleteUserButton").data('userid');
-	    		  			console.log(data);
-	    		  	    	
-	    		  			$.ajax({
-	    		  				type: 'POST',
-	    		  				data: JSON.stringify(data),
-	    		  				contentType: 'application/json',
-	    		  				url: baseUrl + 'deleteUserFromGroup',	
-	    		  				success: function(data) {
-	    		  						if(data.success){
-	    		  							window.location = loc;
-	    		  						}else{
-	    		  							console.log(data.error);
-	    		  						}	
-	    		  				},
-	    		  				error: function (xhr, ajaxOptions, thrownError) {
-	    		  					console.log(thrownError);
-								console.log('WTH');
-	    		  				}
-	    		  			});
-    		  	    });
-    			});
-    		    	
-    			
-			});
-    	</script>
-	</body>	
+        <input id="baseurl" type="hidden" value="<%=baseUrl%>">
+    <% } else { %>
+    <h2 class="title center">This group does not exists!</h2>
+    <% } %>
+  </article>
+  <script>
+    $(document).ready(function() {
+
+      const baseUrl = $('#baseurl').data('baseurl');
+      $(".delete").click(function() {
+        $("#wrapper").append('<div id="overlay"></div>');
+        $("#wrapper").append('<div id="lightBox"><div id="lightBoxHeader"' +
+          '><span class="close"><img src="./../static/plugins/ep_user_pad_frontend/static/images/close-cyan-12.png"' +
+          '></span></div><div id="lightBoxMain">' +
+          '<div class="headline">' +
+          '<h1 lang="en" class="red">Remove  "' + $(this).data('username') + '" from this group?' +
+          '</h1></div><div class="content"><button lang="en" class="marginRight" id="deleteUserButton"' +
+          'data-userid="' + $(this).data('userid') + '" data-groupid="' + $(this).data('groupid') +
+          '">' +
+          'Remove</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');
+        $("#lightBox").css("margin-top", -$("#lightBox").height() / 2);
+
+        $(".close").click(function() {
+          $("#overlay").remove();
+          $("#lightBox").remove();
+        });
+        $("#cancelDelete").click(function() {
+          console.log("clicked");
+          $("#overlay").remove();
+          $("#lightBox").remove();
+        });
+
+        $("#deleteUserButton").click(function() {
+          var data = {};
+          var loc = document.location;
+          data.groupID = $("#deleteUserButton").data('groupid');
+          data.userID = $("#deleteUserButton").data('userid');
+          console.log(data);
+
+          $.ajax({
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            url: baseUrl + 'deleteUserFromGroup',
+            success: function(data) {
+              if (data.success) {
+                window.location = loc;
+              } else {
+                console.log(data.error);
+              }
+            },
+            error: function(xhr, ajaxOptions, thrownError) {
+              console.log(thrownError);
+              console.log('WTH');
+            }
+          });
+        });
+      });
+
+
+    });
+  </script>
+</body>
+
 </html>
-<script src="../static/plugins/ep_maadix/static/js/client/end.js" type="text/javascript"></script>

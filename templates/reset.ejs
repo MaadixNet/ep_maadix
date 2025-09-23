@@ -8,47 +8,47 @@
   <body>
     <%- include('blocks/header', { isAdmin: isAdmin, settings: settings, username: username, userid: userid  }) %>
 
-  <article class="content items-list-page">
-    <div id="wrapper">
-      <div class="title-block">
-        <div class="row">
-          <div class="col-md-12"></div>
+    <article class="content items-list-page">
+      <div id="wrapper">
+        <div class="title-block">
+          <div class="row">
+            <div class="col-md-12"></div>
+          </div>
         </div>
-      </div>
 
-      <div id="inner">
-        <% if (errors.length) { %>
-        <div class="errors">
-          <% errors.forEach(function (item) { %>
-          <div class="error"><%= item.toString() %></div>
-          <% }) %>
+        <div id="inner">
+          <% if (errors.length) { %>
+          <div class="errors">
+            <% errors.forEach(function (item) { %>
+            <div class="error"><%= item.toString() %></div>
+            <% }) %>
+          </div>
+          <% } %>
+          <% if (!valid_token) { %>
+          <h4 class="title center">The link is invalid or has expired. Please request a new password reset.</h4>
+          <% } else if (settings.recover_pw) { %>
+          <div id="formblock" class="confirm">
+            <form id="formEtherpadReset" method="post" class="white" autocomplete="off">
+              <div class="title-block">
+                <h3 class="title" lang="en">Reset password</h3>
+              </div>
+              <label for="email">E-mail (please use the same email account you want to change te password for)</label>
+              <input type="text" name="email" id="email" placeholder="E-mail address" class="smallMarginBottom" required />
+              <label for="password">New password</label>
+              <input type="password" name="password" id="password" placeholder="Password" required />
+              <label for="passwordrepeat">Repeat new password</label>
+              <input type="password" name="passwordrepeat" id="passwordrepeat" placeholder="Confirm Password" required />
+              <input type="hidden" name="baseurl" id="baseurl" value="" />
+              <input type="hidden" name="tok" id="tok" value="<%= token %>" />
+              <button type="submit" lang="en">Reset Password</button>
+            </form>
+          </div>
+          <% } else { %>
+          <h2 class="title center">Recover password is not allowed. Please contact administrator</h2>
+          <% } %>
         </div>
-        <% } %>
-	<% if (!valid_token) { %>
-	<h4 class="title center">The link is invalid or has expired. Please request a new password reset.</h4>
-        <% } else if (settings.recover_pw) { %>
-        <div id="formblock" class="confirm">
-          <form id="formEtherpadReset" method="post" class="white" autocomplete="off">
-            <div class="title-block">
-              <h3 class="title" lang="en">Reset password</h3>
-            </div>
-            <label for="email">E-mail (please use the same email account you want to change te password for)</label>
-            <input type="text" name="email" id="email" placeholder="E-mail address" class="smallMarginBottom" required />
-            <label for="password">New password</label>
-            <input type="password" name="password" id="password" placeholder="Password" required />
-            <label for="passwordrepeat">Repeat new password</label>
-            <input type="password" name="passwordrepeat" id="passwordrepeat" placeholder="Confirm Password" required />
-            <input type="hidden" name="baseurl" id="baseurl" value="" />
-            <input type="hidden" name="tok" id="tok" value="<%= token %>" />
-            <button type="submit" lang="en">Reset Password</button>
-          </form>
-        </div>
-        <% } else { %>
-        <h2 class="title center">Recover password is not allowed. Please contact administrator</h2>
-        <% } %>
       </div>
-    </div>
-  </article>
-</body>
+    </article>
+  </body>
 </html>
 <script src="../static/plugins/ep_maadix/static/js/client/end.js" type="text/javascript"></script>

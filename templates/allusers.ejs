@@ -30,7 +30,8 @@
                       <h4 lang="en" class="margintrop0">Invite user to register. An email will be sent with instructions to complete registration.</h4>
                       <form id="InviteUserRegistration" class="margin20">
                         <input type="mail" placeholder="User email" id="email" autocomplete="off" required />
-			<input type="hidden" id="regtype" value"admin">
+                        <input type="hidden" id="regtype" value="admin" />
+                        <input type="hidden" id="baseurl" value="<%= baseUrl %>/" data-baseurl="<%= baseUrl %>/" />
                         <div style="clear: both"></div>
                         <button type="submit" lang="en" id="InviteUserRegistration">Invite User</button>
                       </form>
@@ -46,6 +47,7 @@
                       <th>Name</th>
                       <th>Email</th>
                       <th>Status</th>
+                      <th>New Password</th>
                       <th>Remove</th>
                     </tr>
 
@@ -57,9 +59,20 @@
                     <td class="editDate"><%=users[i-1].email%></td>
                     <td class="editDate">
                       <% if (users[i - 1].active == 1) { %>
-                      <button class="toggle-user-status-btn active" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Deactivate account">Active</button>
+                      <a class="toggle-user-status-btn active" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Deactivate account">
+                        <i class="demo-icon icon-toggle-on">&#xf205;</i>
+                      </a>
                       <% } else { %>
-                      <button class="toggle-user-status-btn inactive" data-userid="<%= users[i - 1].userID %>" data-status="0" title="Activate account">Inactive</button>
+                      <a class="toggle-user-status-btn inactive" data-userid="<%= users[i - 1].userID %>" data-status="0" title="Activate account">
+                        <i class="demo-icon icon-toggle-off">&#xf204;</i>
+                      </a>
+                      <% } %>
+                    </td>
+                    <td class="newPass">
+                      <% if (users[i - 1].active == 1) { %>
+                      <a class="get-recover-pass-link" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Get recover  password link">
+                        <i class="demo-icon icon-link">&#xf07b;</i>
+                      </a>
                       <% } %>
                     </td>
                     <td title="Delete User" class="last">
@@ -83,9 +96,11 @@
     <% } %>
     <script>
       $(document).ready(function () {
+        var url = $('#baseurl').data('baseurl');
+
         $('.delete').click(function () {
           $('#wrapper').append('<div id="overlay"></div>');
-          $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"' + '><span class="close"><img src="./../static/plugins/ep_user_pad_frontend/static/images/close-cyan-12.png"' + '></span></div><div id="lightBoxMain">' + '<div class="headline">' + '<h1 lang="en" class="red">Remove  "' + $(this).data('username') + '" from Etherpad?' + '</h1><p>User will be removed from all groups and the account will be deleted</p></div><div class="content"><button lang="en" class="marginRight" id="deleteUserButton"' + 'data-userid="' + $(this).data('userid') + '">' + 'Delete</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');
+          $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"' + '></div><div id="lightBoxMain">' + '<div class="headline">' + '<h1 lang="en" class="red">Remove  "' + $(this).data('username') + '" from Etherpad?' + '</h1><p>User will be removed from all groups and the account will be deleted</p></div><div class="content"><button lang="en" class="marginRight" id="deleteUserButton"' + 'data-userid="' + $(this).data('userid') + '">' + 'Delete</button><button lang="en" id = "cancelDelete">Cancel</button></div></div></div>');
           $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
 
           $('.close').click(function () {
@@ -108,7 +123,7 @@
               type: 'POST',
               data: JSON.stringify(data),
               contentType: 'application/json',
-              url: '/deleteUserFromEtherpad',
+              url: url + 'deleteUserFromEtherpad',
               success: function (data) {
                 if (data.success) {
                   window.location = loc;

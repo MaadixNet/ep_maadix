@@ -7,90 +7,70 @@
     <%- include('blocks/header', { isAdmin: isAdmin, settings: settings }) %>
 
     <title>Help</title>
-<article class="content items-list-page">
-  <div id="main">
-    <div class="inside">
-      <h2>Index</h2>
-      <ol>
-        <li><a href="#interfaces">Intro</a></li>
-        <li><a href="#admin-interface">Admin Interface (Settings)</a></li>
-        <li><a href="#user-interface">User Interface</a>
+    <article class="content items-list-page">
+      <div id="main">
+        <div class="inside">
+          <h2>Index</h2>
           <ol>
-            <li><a href="#groups">Groups</a></li>
-            <li><a href="#users">Users</a></li>
-            <li><a href="#roles">Roles</a></li>
-            <li><a href="#pads">Pads</a></li>
+            <li><a href="#interfaces">Intro</a></li>
+            <li><a href="#admin-interface">Admin Interface (Settings)</a></li>
+            <li>
+              <a href="#user-interface">User Interface</a>
+              <ol>
+                <li><a href="#groups">Groups</a></li>
+                <li><a href="#users">Users</a></li>
+                <li><a href="#roles">Roles</a></li>
+                <li><a href="#pads">Pads</a></li>
+              </ol>
+            </li>
           </ol>
-        </li>
-      </ol>
 
-      <h3 id="interfaces">Intro</h3>
-      <p>
-        The plugin provides two different interfaces. The first one is the <strong>administration interface</strong>, which can only be accessed using the Etherpad admin account. Through this interface it is possible to manage all groups and all users in the installation.
-      </p>
-      <p>
-        The second one is the <strong>user interface</strong>, which is accessed with accounts created from the front-end. These accounts only have access to the groups they belong to. Depending on the configuration, users may be able to create their own accounts if registration is allowed; otherwise, they will need to receive an invitation in order to register.
-      </p>
+          <h3 id="interfaces">Intro</h3>
+          <p>The plugin provides two different interfaces. The first one is the <strong>administration interface</strong>, which can only be accessed using the Etherpad admin account. Through this interface it is possible to manage all groups and all users in the installation.</p>
+          <p>The second one is the <strong>user interface</strong>, which is accessed with accounts created from the front-end. These accounts only have access to the groups they belong to. Depending on the configuration, users may be able to create their own accounts if registration is allowed; otherwise, they will need to receive an invitation in order to register.</p>
 
-      <!-- ADMIN INTERFACE -->
-      <h3 id="admin-interface">Admin Interface (Settings)</h3>
-      <p>
-        The Settings tab is located in the menu at the top right corner of the screen. To access this section, you need to log in using the Etherpad admin account. The admin credentials can be found in the <code>settings.json</code> file of your Etherpad installation.
-      </p>
-      <p>From this section you can:</p>
-      <ul>
-        <li>Configure three general installation settings:
-          <ol type="a">
-            <li>Allow users to register</li>
-            <li>Allow users to recover lost passwords</li>
-            <li>Allow public pads</li>
-          </ol>
-        </li>
-        <li>Manage all groups</li>
-        <li>Manage all users</li>
-      </ul>
+          <!-- ADMIN INTERFACE -->
+          <h3 id="admin-interface">Admin Interface (Settings)</h3>
+          <p>The Settings tab is located in the menu at the top right corner of the screen. To access this section, you need to log in using the Etherpad admin account. The admin credentials can be found in the <code>settings.json</code> file of your Etherpad installation.</p>
+          <p>From this section you can:</p>
+          <ul>
+            <li>
+              Configure three general installation settings:
+              <ol type="a">
+                <li>Allow users to register</li>
+                <li>Allow users to recover lost passwords</li>
+                <li>Allow public pads</li>
+              </ol>
+            </li>
+            <li>Manage all groups</li>
+            <li>Manage all users</li>
+          </ul>
 
-      <!-- USER INTERFACE -->
-      <h3 id="user-interface">User Interface</h3>
+          <!-- USER INTERFACE -->
+          <h3 id="user-interface">User Interface</h3>
 
-      <h4 id="groups">Groups</h4>
-      <p>
-        Private Pads must be created within a group. You can belong to one or more groups and you can create your own. To view the Groups you have access to, or create a new one, go to <a href="dashboard">'My Groups'</a>.
-      </p>
-      <p>
-        Under "Create a new Private Group" enter a group name (this name must not exist in the system yet) and click on "Create". The new group will be listed on the same page. You can then start inviting people or creating pads.
-      </p>
+          <h4 id="groups">Groups</h4>
+          <p>Private Pads must be created within a group. You can belong to one or more groups and you can create your own. To view the Groups you have access to, or create a new one, go to <a href="dashboard">'My Groups'</a>.</p>
+          <p>Under "Create a new Private Group" enter a group name (this name must not exist in the system yet) and click on "Create". The new group will be listed on the same page. You can then start inviting people or creating pads.</p>
 
-      <h4 id="users">Users</h4>
-      <p>
-        If you want to add/invite users, click on "View /Add Users" from the table in "My Groups" page. Under "Invite user to this group" insert a valid email address. If the inserted email does not exist in the system yet, a confirmation email will be sent to the new user for activating the account. You will have to choose the role you want to assign to the new user for this group.
-      </p>
+          <h4 id="users">Users</h4>
+          <p>If you want to add/invite users, click on "View /Add Users" from the table in "My Groups" page. Under "Invite user to this group" insert a valid email address. If the inserted email does not exist in the system yet, a confirmation email will be sent to the new user for activating the account. You will have to choose the role you want to assign to the new user for this group.</p>
 
-      <h4 id="roles">Roles</h4>
-      <p>
-        Roles apply only to the current group. A user may have access to multiple groups with a different role in each of them. If a user creates a new group, their role will automatically be "Admin".
-      </p>
-      <p>
-        A user can never assign a role higher than their own role inside the current group. The available roles are:
-      </p>
-      <ul>
-        <li>Group Author: Can create and edit Pads</li>
-        <li>Group Manager: Can create/edit/delete Pads and invite/remove Users</li>
-        <li>Group Admin: Can create/edit/delete Pads, invite/remove Users, delete the whole group</li>
-      </ul>
-      <p>
-        The newly invited user will appear in the table below and you will be able to change their role later.
-      </p>
+          <h4 id="roles">Roles</h4>
+          <p>Roles apply only to the current group. A user may have access to multiple groups with a different role in each of them. If a user creates a new group, their role will automatically be "Admin".</p>
+          <p>A user can never assign a role higher than their own role inside the current group. The available roles are:</p>
+          <ul>
+            <li>Group Author: Can create and edit Pads</li>
+            <li>Group Manager: Can create/edit/delete Pads and invite/remove Users</li>
+            <li>Group Admin: Can create/edit/delete Pads, invite/remove Users, delete the whole group</li>
+          </ul>
+          <p>The newly invited user will appear in the table below and you will be able to change their role later.</p>
 
-      <h4 id="pads">Pads</h4>
-      <p>
-        Pads must be created from the group pad list page. Click on "View/Add Pads" from <a href="dashboard">'My Groups'</a> page table. Enter a pad name under "Create Private Pad for this group" and click on "Create". The new pad will be listed in the table below. Click on the pad name to start editing.
-      </p>
-      <p>
-        Pad names must be unique within each group.
-      </p>
-    </div>
-  </div>
-</article>
+          <h4 id="pads">Pads</h4>
+          <p>Pads must be created from the group pad list page. Click on "View/Add Pads" from <a href="dashboard">'My Groups'</a> page table. Enter a pad name under "Create Private Pad for this group" and click on "Create". The new pad will be listed in the table below. Click on the pad name to start editing.</p>
+          <p>Pad names must be unique within each group.</p>
+        </div>
+      </div>
+    </article>
   </body>
 </html>

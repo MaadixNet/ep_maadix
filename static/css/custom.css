@@ -9,7 +9,7 @@ body {
   overflow-x: hidden;
 }
 body {
-  font-size: 1rem;
+  font-size: 0.8rem;
   background-color: #f2f2f2;
 }
 iframe#iframePad {
@@ -102,6 +102,10 @@ header h2.title {
 article {
   padding: 2%;
 }
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
 a {
   text-decoration: none;
   color: #44587a;
@@ -189,9 +193,18 @@ table {
   border-collapse: collapse;
   margin: 15px 0;
 }
-table.dataTable{ margin: 12px auto;}
+table.dataTable {
+  margin: 24px auto;
+}
 /* Zebra striping */
 
+.dt-info,
+.dt-length {
+  text-align: center;
+}
+.dt-paging nav {
+  text-align: center;
+}
 tr:nth-of-type(odd) {
   background: #dbdcde;
 }
@@ -267,6 +280,7 @@ th.wiprec-20 {
 
 #lightBox .content {
   margin: 20px 30px 25px 30px;
+  padding: 12px;
 }
 
 #lightBox .headline {

@@ -40,14 +40,11 @@ const mailTransporterAsync = require(__dirname + '/mail');
 let eMailMessages = {};
 try {
   eMailMessages = require(__dirname + '/email.json');
-  eMailMessages.from = eMailMessages.from;
 } catch (err) {
   eMailMessages = require(__dirname + '/email-example.json');
-  const os = require('os');
-  const fqdn = os.hostname();
-  eMailMessages.from = `etherpad@${fqdn}`;
 }
 
+eMailMessages.from = eMailMessages.invitationfrom;
 var dbAuth = settings.dbSettings;
 var dbAuthParams = {
   host: dbAuth.host,
@@ -59,11 +56,34 @@ var dbAuthParams = {
 };
 
 var DEBUG_ENABLED = true;
-
+/*
 function getAppBaseUrl(req) {
   return `${req.protocol}://${req.get('host')}${req.baseUrl || ''}`;
 }
+*/
 
+/**
+ * Return base URL
+ * proxy-provided prefix + original path
+ *
+ * @param {object} req    Express request object
+ * @returns {string}      e.g. "http://127.0.0.1/etherpad"
+ */
+function getBaseURL(req) {
+  // protocol (fallback to req.protocol)
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').toString().split(',')[0].trim();
+
+  // host (includes port if present)
+  const host = (req.headers['x-forwarded-host'] || req.get('host') || 'localhost').toString().split(',')[0].trim();
+
+  // installation prefix (forwarded by Apache, fallback = '')
+  let prefix = (req.headers['x-forwarded-prefix'] || '').toString().trim();
+  if (prefix.endsWith('/')) {
+    prefix = prefix.slice(0, -1); // remove trailing slash
+  }
+
+  return `${proto}://${host}${prefix}`;
+}
 var log = function (type, message) {
   if (typeof message == 'string') {
     if (type == 'error') {
@@ -360,6 +380,22 @@ async function getUsersOfGroupAsync(groupId, userId) {
     return [];
   }
 }
+
+
+async function getAllUsersOfGroupAsync(groupId) {
+  const sql = `
+    SELECT * from User u where u.userID IN 
+    (select unique ug.userID from UserGroup ug where ug.groupID=?)
+  `;
+  try {
+    const [rows] = await pool.query(sql, [groupId]);
+    return rows.filter((user) => user.name !== '');
+  } catch (err) {
+    mySqlErrorHandler(err);
+    return [];
+  }
+}
+
 exports.eejsBlock_indexWrapper = function (hook_name, args, cb) {
   args.content = eejs.require('ep_maadix/templates/index_redirect.ejs');
   return cb();
@@ -546,7 +582,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       const settings = await getPadsSettingsAsync();
       const authenticated = await userAuthenticatedAsync(req);
-
+      baseUrl = getBaseURL(req);
       if (authenticated) {
         return res.redirect(req.session.baseurl + '/dashboard');
       }
@@ -555,6 +591,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         errors: [],
         activated: activated,
         settings: settings,
+        baseUrl: baseUrl,
       };
 
       res.send(eejs.require('ep_maadix/templates/login2.ejs', render_args));
@@ -578,8 +615,8 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     if (result.success) {
       req.session.userId = result.user.userID;
       req.session.username = result.user.name;
-      req.session.baseurl = getAppBaseUrl(req);
-      res.redirect(`${getAppBaseUrl(req)}` + '/dashboard');
+      req.session.baseurl = getBaseURL(req);
+      res.redirect(req.session.baseurl + '/dashboard');
       return;
     } else {
       if (result.userFound && !result.active == 1) {
@@ -678,7 +715,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       const userEmail = req.body.userEmail;
       const regtype = req.body.regtype || '';
-      const baseUrl = getAppBaseUrl(req);
+      const baseUrl = getBaseURL(req);
 
       const [rows, fields] = await pool.query('SELECT * FROM User WHERE email = ?', [userEmail]);
       if (rows.length > 0) {
@@ -767,7 +804,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         token: token,
         valid_token: valid,
         settings: settings,
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         authenticated: authenticated,
         isAdmin: req.session?.user?.is_admin || false,
         username,
@@ -775,6 +812,34 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       };
       res.send(eejs.require('ep_maadix/templates/reset.ejs', render_args));
     }
+  });
+
+  /* Just return the link for recovering password.
+   * Useful if the app did not configure ny method
+   * for sending emails
+   */
+  args.app.post('/getRecoverPassLink', async (req, res) => {
+    const userID = req.body.userID;
+    var data = {};
+    try {
+      const [rows, fields] = await pool.query('SELECT * FROM User WHERE userID = ?', [userID]);
+      if (rows.length < 1) {
+        return sendError('This account does not exist', res);
+      }
+      const user = rows[0];
+      const salt = await createSaltAsync();
+      const confirmationString = await generateResetToken();
+      await pool.query('UPDATE User SET confirmationString = ? WHERE userID = ?', [confirmationString, userID]);
+
+      const resetUrl = `${getBaseURL(req)}/reset/${confirmationString}`;
+      data.success = true;
+      data.resetUrl = resetUrl;
+      data.email = user.email;
+    } catch (error) {
+      console.error('Error en /recoverAsync:', error);
+      data.error = true;
+    }
+    res.send(data);
   });
 
   args.app.post('/recover', [check('email').isEmail().trim()], async (req, res) => {
@@ -796,7 +861,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       //await queryAsync('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
       await pool.query('UPDATE User SET confirmationString = ? WHERE email = ?', [confirmationString, userEmail]);
 
-      const resetUrl = `${getAppBaseUrl(req)}/reset/${confirmationString}`;
+      const resetUrl = `${getBaseURL(req)}/reset/${confirmationString}`;
       const msgText = eMailMessages.pswdresetmsg.replace(/<url>/, resetUrl);
 
       const message = {
@@ -885,7 +950,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         if (currGroup && currUser && currUserGroup != null) {
           render_args = {
             errors: [],
-            baseUrl: `${getAppBaseUrl(req)}`,
+            baseUrl: `${getBaseURL(req)}`,
             id: currGroup.name,
             isAdmin: req.session?.user?.is_admin || false,
             groupid: currGroup.groupID,
@@ -900,7 +965,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         } else {
           render_args = {
             errors: [],
-            baseUrl: `${getAppBaseUrl(req)}`,
+            baseUrl: `${getBaseURL(req)}`,
             id: false,
             groupid: false,
             isAdmin: req.session?.user?.is_admin || false,
@@ -918,7 +983,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         sendError('Internal server error', res);
       }
     } else {
-      res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      res.redirect(`${getBaseURL(req)}` + '/login');
     }
   });
 
@@ -928,7 +993,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const authenticated = await userAuthenticatedAsync(req);
 
       if (!authenticated) {
-        res.redirect(`${getAppBaseUrl(req)}` + '/login');
+        res.redirect(`${getBaseURL(req)}` + '/login');
         return;
       }
 
@@ -951,7 +1016,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         username: req.session.username,
         authenticated: authenticated,
         isAdmin: req.session?.user?.is_admin || false,
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         role: currUserGroup?.Role || false,
         users: users || false,
         settings: settings,
@@ -1100,7 +1165,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const userId = req.session.userId;
 
       if (!(await userAuthenticatedAsync(req))) {
-        res.redirect(`${getAppBaseUrl(req)}` + '/login');
+        res.redirect(`${getBaseURL(req)}` + '/login');
         return;
       }
 
@@ -1151,7 +1216,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const settings = await getPadsSettingsAsync();
 
       const authenticated = await userAuthenticatedAsync(req);
-      if (!authenticated) return res.redirect(`${getAppBaseUrl(req)}` + '/login');
+      if (!authenticated) return res.redirect(`${getBaseURL(req)}` + '/login');
       const groupID = req.params.groupID;
       const rawPadID = req.params.padID;
 
@@ -1165,7 +1230,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const foundGroup = currGroup || false;
       const foundUser = currUser;
       const render_args = {
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         errors: [],
         padname: padExists.length ? padID : false,
         userid: userID,
@@ -1176,7 +1241,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         groupID: foundGroup ? groupID : false,
         groupName: foundGroup ? foundGroup.name : false,
         settings,
-        padurl: padExists.length ? `${getAppBaseUrl(req)}/p/${rawPadID}` : false,
+        padurl: padExists.length ? `${getBaseURL(req)}/p/${rawPadID}` : false,
       };
 
       res.send(eejs.require('ep_maadix/templates/pad.ejs', render_args));
@@ -1192,7 +1257,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const authenticated = await userAuthenticatedAsync(req);
 
       if (authenticated) {
-        return res.redirect(`${getAppBaseUrl(req)}` + '/dashboard');
+        return res.redirect(`${getBaseURL(req)}` + '/dashboard');
       }
       const render_args = {
         errors: [],
@@ -1233,7 +1298,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         password: req.body.password,
         username: req.body.username,
         tok: req.body.tok,
-        location: getAppBaseUrl(req),
+        location: getBaseURL(req),
       };
 
       // make sure username is available
@@ -1272,11 +1337,11 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     try {
       const authenticated = await userAuthenticatedAsync(req);
       if (!authenticated) {
-        return res.redirect(`${getAppBaseUrl(req)}` + '/login');
+        return res.redirect(`${getBaseURL(req)}` + '/login');
       }
 
       const { groupId, newrole, userid } = req.body;
-      const baseurl = `${getAppBaseUrl(req)}`;
+      const baseurl = `${getBaseURL(req)}`;
 
       if (!groupId) return sendError('Group-Id not defined', res);
       if (!newrole) return sendError('New Role not defined', res);
@@ -1310,11 +1375,10 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     if (isAdmin || authenticated) {
       try {
         const { userId, newStatus } = req.body;
-        const baseurl = `${getAppBaseUrl(req)}`;
+        const baseurl = `${getBaseURL(req)}`;
         if (!userId || typeof newStatus === 'undefined') {
           return sendError('Missing parameters', res);
         }
-
         await pool.query('UPDATE User SET confirmed=1,  active=? WHERE userID = ?', [newStatus, userId]);
 
         data.success = true;
@@ -1347,7 +1411,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
         authenticated: authenticated,
         isAdmin: req.session?.user?.is_admin || false,
         settings,
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         message: '',
       };
       res.send(eejs.require('ep_maadix/templates/user2.ejs', render_args));
@@ -1418,7 +1482,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const authenticated = await userAuthenticatedAsync(req);
       if (!authenticated) return sendError('You are not logged in!', res);
 
-      const baseUrl = getAppBaseUrl(req);
+      const baseUrl = getBaseURL(req);
       const { groupId, userEmail, UserRole } = req.body;
       if (!groupId) return sendError('Group ID not defined', res);
       if (!userEmail) return sendError('No User given', res);
@@ -1471,6 +1535,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       } else {
         userID = user.userID;
         msg = eMailMessages.invitationmsg;
+        url = `${baseUrl}/group/${groupId}`;
       }
 
       // Add user to group
@@ -1570,9 +1635,9 @@ exports.expressCreateServer = function (hook_name, args, cb) {
 
       const username = authenticated ? req.session.username : '';
       const userid = authenticated ? req.session.userId : '';
-
+      const baseUrl = getBaseURL(req);
       const render_args = {
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl,
         errors: [],
         settings,
         authenticated,
@@ -1595,7 +1660,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       var sql = 'Select Groups.*, UserGroup.Role from Groups inner join UserGroup on(UserGroup.groupID = Groups.groupID) where UserGroup.userID = ?';
       var groups = await getAllSqlAsync(sql, [req.session.userId]);
       var render_args = {
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         isAdmin: req.session?.user?.is_admin || false,
         username: req.session.username,
         authenticated: authenticated,
@@ -1621,7 +1686,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const settings = await getPadsSettingsAsync();
 
       const render_args = {
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         isAdmin: req.session?.user?.is_admin || false,
         username: req.session.username,
         authenticated: authenticated,
@@ -1649,7 +1714,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       const settings = await getPadsSettingsAsync();
 
       const render_args = {
-        baseUrl: `${getAppBaseUrl(req)}`,
+        baseUrl: `${getBaseURL(req)}`,
         isAdmin: req.session?.user?.is_admin || false,
         authenticated: authenticated,
         username: req.session.username,
@@ -1660,7 +1725,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       res.send(eejs.require('ep_maadix/templates/settings.ejs', render_args));
     } catch (err) {
       console.error('Error in /settings:', err);
-      res.status(500).send('Internal Server Error');
+      res.status(5900100).send('Internal Server Error');
     }
   });
 
@@ -1756,7 +1821,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     try {
       const authenticated = await userAuthenticatedAsync(req);
       const isAdmin = req.session?.user?.is_admin || false;
-      const baseUrl = `${getAppBaseUrl(req)}`;
+      const baseUrl = `${getBaseURL(req)}`;
       const reidrectTo = `${baseUrl}/login`;
       if (!isAdmin) {
         return res.redirect(reidrectTo);
@@ -1786,15 +1851,41 @@ exports.expressCreateServer = function (hook_name, args, cb) {
   args.app.get('/allusers', async (req, res) => {
     const authenticated = await userAuthenticatedAsync(req);
     const isAdmin = req.session?.user?.is_admin || false;
-    const baseUrl = `${getAppBaseUrl(req)}`;
-    const reidrectTo = `${baseUrl}/login`;
+    const baseUrl = `${getBaseURL(req)}`;
+    const reidrectTo = `${baseUrl}/settings`;
+    if (!isAdmin) {
+      return res.redirect(reidrectTo);
+    }
+    const groupId = req.params.groupid;
+    var settings = await getPadsSettingsAsync();
+    var sql = 'Select * from User';
+    var users = await getAllSqlAsync(sql, [req.session.userId]);
+    var render_args = {
+      baseUrl: baseUrl,
+      isAdmin: isAdmin,
+      authenticated: authenticated,
+      username: req.session.username,
+      userid: req.session.userId,
+      baseurl: req.session.baseurl,
+      users: users,
+      settings: settings,
+      errors: [],
+    };
+    res.send(eejs.require('ep_maadix/templates/allusers.ejs', render_args));
+  });
+
+  args.app.get('/allusers/:groupid', async (req, res) => {
+    const authenticated = await userAuthenticatedAsync(req);
+    const isAdmin = req.session?.user?.is_admin || false;
+    const baseUrl = `${getBaseURL(req)}`;
+    const reidrectTo = `${baseUrl}/settings`;
     if (!isAdmin) {
       return res.redirect(reidrectTo);
     }
 
+    const groupId = req.params.groupid;
     var settings = await getPadsSettingsAsync();
-    var sql = 'Select * from User';
-    var users = await getAllSqlAsync(sql, [req.session.userId]);
+    var users = await getAllUsersOfGroupAsync(groupId);
     var render_args = {
       baseUrl: baseUrl,
       isAdmin: isAdmin,

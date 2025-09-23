@@ -35,6 +35,25 @@ var getBaseURL = function (slice, cb) {
   cb(url);
 };
 
+function getURL(slice) {
+  const loc = document.location;
+  const port = loc.port === '' ? (loc.protocol === 'https:' ? 443 : 80) : loc.port;
+  let url = loc.protocol + '//' + loc.hostname;
+  const pathComponents = location.pathname.split('/');
+
+  // Strip admin/plugins
+  const baseURL = pathComponents.slice(0, pathComponents.length - slice).join('/') + '/';
+
+  if (loc.port) {
+    url = url + ':' + loc.port;
+  }
+  url = url + baseURL;
+
+  console.log(url);
+  console.log(baseURL);
+
+  return url; // returns a Promise<string> when awaited
+}
 var first = true;
 
 function post(data, url, cb) {
@@ -386,7 +405,7 @@ jQuery(document).ready(function () {
   $('#setSettingsForm').submit(function (e) {
     e.preventDefault();
     var url;
-    getBaseURL(2, function (baseurl) {
+    getBaseURL(1, function (baseurl) {
       const data = {
         register_enabled: $('#register_enabled').is(':checked') ? '1' : '0',
         recover_pw: $('#recover_pw').is(':checked') ? '1' : '0',
@@ -599,32 +618,61 @@ jQuery(document).ready(function () {
 
   document.querySelectorAll('.toggle-user-status-btn').forEach((button) => {
     button.addEventListener('click', async () => {
-      getBaseURL(2, function (baseurl) {
-        const data = {
-          userId: button.dataset.userid,
-          currentStatus: button.dataset.status, // string: "0" or "1"
-          newStatus: button.dataset.status === '1' ? 0 : 1, // number: 0 or 1
-        };
-
-        console.log('Data sent:', data);
-        $.ajax({
-          type: 'POST',
-          data: JSON.stringify(data),
-          contentType: 'application/json',
-          url: '/updateUserStatus',
-          success: function (data) {
-            if (data.success) {
-              window.location.href = document.location;
-              console.log('User updated');
-            } else {
-              console.log(data.error);
-            }
-          },
-          error: function (xhr, ajaxOptions, thrownError) {
-            console.log(thrownError);
-          },
-        });
+      const data = {
+        userId: button.dataset.userid,
+        currentStatus: button.dataset.status, // string: "0" or "1"
+        newStatus: button.dataset.status === '1' ? 0 : 1, // number: 0 or 1
+      };
+      const baseurl = $('#baseurl').data('baseurl');
+      console.log('Data sent:', data);
+      $.ajax({
+        type: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        url: baseurl + 'updateUserStatus',
+        success: function (data) {
+          if (data.success) {
+            window.location.href = document.location;
+            console.log('User updated');
+          } else {
+            console.log(data.error);
+          }
+        },
+        error: function (xhr, ajaxOptions, thrownError) {
+          console.log(thrownError);
+        },
       });
+    });
+  });
+
+  $('.get-recover-pass-link').click(function () {
+    var url = $('#baseurl').data('baseurl');
+    var data = {};
+    var loc = document.location;
+    data.userID = $(this).data('userid');
+    console.log(data);
+    $.ajax({
+      type: 'POST',
+      data: JSON.stringify(data),
+      contentType: 'application/json',
+      url: url + 'getRecoverPassLink',
+      success: function (data) {
+        if (data.success) {
+          $('#wrapper').append('<div id="overlay"></div>');
+          $('#wrapper').append('<div id="lightBox"><div id="lightBoxHeader"' + '></div><div id="lightBoxMain">' + '<div class="headline">' + '<h3 lang="en" class="red">Recover Password link for "' + data.email + '" ' + '</h3><p>You can manually send the link below to the user so they can recover their password. The link will expire in 10 minutes. Generating a new link invalidates the previous one.</p><pre> ' + data.resetUrl + '</pre></div><div class="content"><button lang="en" id = "cancelDelete">OK</button></div></div></div>');
+          $('#lightBox').css('margin-top', -$('#lightBox').height() / 2);
+
+          $('#cancelDelete').click(function () {
+            $('#overlay').remove();
+            $('#lightBox').remove();
+          });
+        } else {
+          console.log(data.error);
+        }
+      },
+      error: function (xhr, ajaxOptions, thrownError) {
+        console.log(thrownError);
+      },
     });
   });
 

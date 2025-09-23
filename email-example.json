@@ -7,7 +7,7 @@
   "tls": "false",
   "ssl": "true",
   "invitationmsg": "The user \n\n<fromuser> has added you to the Etherpad private group <groupname>.\nYou can now begin to work collaboratively with the group members and read, edit any pad within this group.\n\n Why to wait? Click here to get started: <url>",
-  "invitationfrom": "mustermann@example.com",
+  "invitationfrom": "etherpad@etherpad.org",
   "invitationsubject": "[Etherpad] Group Invitation",
   "registrationtext": "Hello,\n\nYour registration at Etherpad was successfull! To complete your registration please click on the following link: <url> \nAfter completing registration, please log in with your new account.",
   "registrationfrom": "mustermann@example.at",
