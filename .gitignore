@@ -1,5 +1,6 @@
 node_modules
 email.json
+package-lock.json
 !email.json.template
 *~
 *.patch
