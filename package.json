@@ -31,9 +31,5 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "version": "2.1.0",
-  "devDependencies": {
-    "prettier": "^3.6.2",
-    "prettier-plugin-ejs": "^1.0.3"
-  }
+  "version": "2.1.0"
 }
