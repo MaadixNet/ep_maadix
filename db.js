@@ -1,6 +1,6 @@
 var settings = require('ep_etherpad-lite/node/utils/Settings');
 const mysql = require('mysql2/promise');
-var dbAuth = settings.dbSettings;
+var dbAuth = (settings.default && settings.default.dbSettings) || settings.dbSettings;
 var dbAuthParams = {
   host: dbAuth.host,
   user: dbAuth.user,

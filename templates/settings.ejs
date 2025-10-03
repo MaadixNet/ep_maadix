@@ -72,10 +72,12 @@
                   <h1 class="login-title">Etherpad</h1>
                   <p>To edit Group Pads settings, you need to loogin using the etherpad admin credentials</p>
                   <form class="login-inner-box input-control" id="adminLloginForm">
-                    <div>Username</div>
+                    <h4>Username</h4>
                     <input class="login-textinput input-control" placeholder="Username" type="text" name="username" id="username" />
-                    <div>Password</div>
+                    <h4>Password</h4>
                     <input class="login-textinput" placeholder="Password" type="password" name="password" id="password" />
+                    <input type="hidden" id="baseUrl" value="<%= baseUrl %>" />
+                    <br />
                     <input class="login-button" type="submit" value="Login" name="adminLloginForm" />
                   </form>
                 </div>

@@ -428,7 +428,8 @@ jQuery(document).ready(function () {
     e.preventDefault();
     const username = $('#username').val();
     const password = $('#password').val();
-    fetch('/admin-auth/', {
+    const baseUrl = $('#baseUrl').val();
+    fetch(baseUrl + '/admin-auth/', {
       method: 'POST',
       headers: {
         Authorization: 'Basic ' + btoa(username + ':' + password),

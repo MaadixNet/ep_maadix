@@ -45,7 +45,7 @@ try {
 }
 
 eMailMessages.from = eMailMessages.invitationfrom;
-var dbAuth = settings.dbSettings;
+var dbAuth = (settings.default && settings.default.dbSettings) || settings.dbSettings;
 var dbAuthParams = {
   host: dbAuth.host,
   user: dbAuth.user,
@@ -1211,7 +1211,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
     }
   });
 
-  args.app.get('/group/:groupID/pad/:padID/?', async (req, res) => {
+  args.app.get('/group/:groupID/pad/:padID/', async (req, res) => {
     try {
       const settings = await getPadsSettingsAsync();
 

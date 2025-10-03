@@ -56,7 +56,6 @@
             <th class="wiprec-20">Role</th>
             <%if (role < 2) {%>
             <th>Active</th>
-            <th>New Password</th>
             <% } %>
             <%if (role < 3) {%>
             <th>Remove</th>
@@ -88,23 +87,15 @@
           <%if (role < 2) {%>
           <td class="editDate">
             <% if (users[i - 1].active == 1) { %>
-            <a class="toggle-user-status-btn active" data-userid="<%= users[i - 1].userID %>" data-status="1" title="Deactivate account">
+            <span class="active" data-userid="<%= users[i - 1].userID %>" data-status="1">
               <i class="demo-icon icon-toggle-on">&#xf205;</i>
-            </a>
+            </span>
             <% } else { %>
-            <a class="toggle-user-status-btn inactive" data-userid="<%= users[i - 1].userID %>" data-status="0" title="Activate account">
+            <span class=" inactive" data-userid="<%= users[i - 1].userID %>" data-status="0">
               <i class="demo-icon icon-toggle-off">&#xf204;</i>
-              </>
+              </span>
               <% } %>
           </td>
-          <td class="newPass">
-            <% if (users[i - 1].active == 1) { %>
-            <a class="get-recover-pass-link " data-userid="<%= users[i - 1].userID %>" data-status="1" title="Get recover  password link">
-              <i class="demo-icon icon-link">&#xf07b;</i>
-            </a>
-            <% } %>
-          </td>
-
           <% } %>
           <%if (role < 3) {%>
           <td title="Delete User" class="last">
