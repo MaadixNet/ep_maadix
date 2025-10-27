@@ -70,9 +70,6 @@ function getAppBaseUrl(req) {
  * @returns {string}      e.g. "http://127.0.0.1/etherpad"
  */
 function getBaseURL(req) {
-  // protocol (fallback to req.protocol)
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').toString().split(',')[0].trim();
-
   // host (includes port if present)
   const host = (req.headers['x-forwarded-host'] || req.get('host') || 'localhost').toString().split(',')[0].trim();
 
@@ -82,7 +79,7 @@ function getBaseURL(req) {
     prefix = prefix.slice(0, -1); // remove trailing slash
   }
 
-  return `${proto}://${host}${prefix}`;
+  return `https://${host}${prefix}`;
 }
 var log = function (type, message) {
   if (typeof message == 'string') {
