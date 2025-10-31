@@ -235,6 +235,10 @@ async function encryptPasswordAsync(password, salt) {
     });
   });
 }
+// Legacy 
+function encryptPasswordOld(password, salt) {
+  return crypto.createHmac('sha256', salt).update(password).digest('hex');
+}
 
 async function getAllSqlAsync(sql, params = []) {
   log('debug', 'getAllSql');
@@ -508,8 +512,15 @@ const userAuthentication = async function (username, password) {
     userFound = true;
     confirmed = foundUser.confirmed;
     active = foundUser.active;
-
-    const encrypted = await encryptPasswordAsync(password.toString(), foundUser.salt);
+    let encrypted;
+    /* Old version used a different encryption algoryhtm. Instead of forcing user to tecover password, we keep both methods., at least in this version*/
+    if (foundUser.salt.length <=10){
+      // Legacy algorythm       
+      encrypted = encryptPasswordOld(password.toString(), foundUser.salt);
+    }
+    else{
+      encrypted = await encryptPasswordAsync(password.toString(), foundUser.salt);
+    }
 
     if (foundUser.password === encrypted && confirmed && active) {
       // Valid user
@@ -613,6 +624,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
       req.session.userId = result.user.userID;
       req.session.username = result.user.name;
       req.session.baseurl = getBaseURL(req);
+      render_args.baseUrl = req.session.baseurl;
       res.redirect(req.session.baseurl + '/dashboard');
       return;
     } else {
